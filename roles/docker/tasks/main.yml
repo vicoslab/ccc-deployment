@@ -1,0 +1,15 @@
+- name: Install docker 
+  import_tasks: install-docker.yml
+
+- name: Install nvidia plugin if required
+  import_tasks: install-nvidia-docker.yml
+  when: docker_nvidia_plugin|bool
+  
+- name: Login to repositiroies
+  import_tasks: login-repository.yml
+
+- name: Deploy networks
+  import_tasks: deploy-networks.yml
+  
+- name: Deploy portrainer agent for GUI management
+  import_tasks: deploy-portrainer-agent.yml

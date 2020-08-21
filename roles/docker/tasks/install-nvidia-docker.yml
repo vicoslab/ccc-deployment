@@ -1,0 +1,34 @@
+- name: Install required system packages
+  apt: 
+    name: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common']
+    state: latest 
+    update_cache: yes 
+
+- name: Add nvidia-docker GPG apt Key
+  apt_key:
+    url: https://nvidia.github.io/nvidia-docker/gpgkey
+    state: present
+
+- name: Add Docker Repository
+  get_url:
+    url: https://nvidia.github.io/nvidia-docker/{{ ansible_distribution|lower }}{{ ansible_distribution_version }}/nvidia-docker.list 
+    dest: /etc/apt/sources.list.d/nvidia-docker.list
+
+- name: Update apt and install nvidia-container-toolkit and nvidia-container-runtime
+  apt: 
+    update_cache: yes 
+    name: [ 'nvidia-container-toolkit', 'nvidia-container-runtime']
+    state: present
+  register: aptkey
+    
+- name: Set nvidia as default docker runtime
+  template:
+    src: docker-daemon.json
+    dest: /etc/docker/daemon.json
+    
+- name: Reload docker
+  systemd:
+    name: docker
+    state: reloaded
+  when: aptkey.changed
+    

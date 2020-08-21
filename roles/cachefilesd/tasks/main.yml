@@ -1,0 +1,42 @@
+---
+# based on https://github.com/pantarei/ansible-role-cachefilesd
+
+- name: cachefilesd | apt-get install
+  apt:
+    name: "{{ pgk_items.name }}"
+    state: "{{ pgk_items.state }}"
+  with_items:
+    - { state: "latest", name: "cachefilesd" }
+  loop_control: {loop_var: pgk_items}
+  notify: cachefilesd | restart service
+  
+  
+- name: cachefilesd | copy templates
+  template:
+    src: "{{ files_iter.src }}"
+    dest: "{{ files_iter.dest }}"
+    owner: "{{ files_iter.owner }}"
+    group: "{{ files_iter.group }}"
+    mode: "{{ files_iter.mode }}"
+  with_items:
+    - { src: "cachefilesd.j2", dest: "/etc/default/cachefilesd", owner: "root", group: "root", mode: "0644" }
+    - { src: "cachefilesd.conf.j2", dest: "/etc/cachefilesd.conf", owner: "root", group: "root", mode: "0644" }
+  loop_control: {loop_var: files_iter}
+  notify: cachefilesd | restart service
+
+- name: cachefilesd | enable service
+  service:
+    name: "cachefilesd"
+    enabled: "{{ cachefilesd_state != 'stopped' }}"
+    state: "{{ cachefilesd_state }}"
+  notify: cachefilesd | restart service
+  
+- name: cachefilesd | increase soft limit on number of files
+  pam_limits:
+    domain: '*'
+    limit_type: soft
+    limit_item: nofile
+    value: "64000"
+    use_max: yes
+  when: cachefilesd_state != 'stopped'
+

@@ -1,0 +1,16 @@
+- name: Container for portrainer agent
+  docker_container:
+    # based on compose file from https://downloads.portainer.io/agent-stack.yml
+    name: "portainer-agent"
+    image: portainer/agent
+    state: started
+    env:
+      AGENT_SECRET: "{{ docker_secure.potrainer_agent_token | default(omit) }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    ports: 
+      - "{{docker_portainer_publish_ip}}:9001:9001/tcp"
+    restart_policy: always
+    pull: yes
+  when: docker_portainer_agent|bool

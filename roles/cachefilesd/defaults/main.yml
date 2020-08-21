@@ -1,0 +1,14 @@
+cachefilesd_state: started # stopped or started
+cachefilesd_cache_folder: /var/cache/cachefilesd
+cachefilesd_brun: 6% # cannot be below 6%
+cachefilesd_bcull: 3%
+cachefilesd_bstop: 1%
+cachefilesd_frun: 6% # cannot be below 6%
+cachefilesd_fcull: 3%
+cachefilesd_fstop: 1%
+# Additional options that are passed to the Daemon.
+#cachefilesd_daemon_opts: ""
+# Time to wait for the server to die, in seconds.
+#cachefilesd_die_time: 10
+# Time to wait for the server to start, in seconds.
+#cachefilesd_start_time: 2

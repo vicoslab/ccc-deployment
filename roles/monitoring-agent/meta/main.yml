@@ -1,0 +1,3 @@
+dependencies:
+  - role: nvidia
+    when: monitoring_agent_enabled_gpu|bool

@@ -1,0 +1,21 @@
+# NOTE: 
+# USER_ACCESS-> "unlimited" == access to internal net, or, "restricted" == access to internet only (for students)
+
+deployment_types:
+  student: 
+    network_access: restricted
+    default_nodes: ['node3'] 
+    allowed_nodes: ['node3'] 
+  researcher: 
+    network_access: unlimited
+    default_nodes: ['node1']
+    allowed_nodes: ['node1','node2','node3']
+
+deployment_users:
+  yourname@email.com:
+    USER_FULLNAME: Your Name
+    USER_EMAIL: yourname@email.com
+    USER_NAME: username
+    USER_PUBKEY: ""
+    USER_PUBKEY_FROM_GITHUB: github_username
+    USER_TYPE: researcher

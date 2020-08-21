@@ -1,0 +1,20 @@
+- name: Deploy container for local Patroller node
+  docker_container:
+    name: "claims"
+    image: "{{patroller_image_version}}"
+    env:
+      PATROLLER_USER_LABELS: "ccc-user.email"
+      PATROLLER_LEASE: "{{patroller_lease|string}}"
+    networks:
+      - name: "{{patroller_network}}"
+        aliases: ["claims", "reservation"]
+      - name: "bridge"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    ports:
+     - "{{patroller_publish_ip}}:9011:80"
+    pid_mode: host
+    privileged: True
+    purge_networks: yes
+    restart_policy: always
+    pull: yes

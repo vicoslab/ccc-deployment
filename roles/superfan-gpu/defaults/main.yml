@@ -1,0 +1,2 @@
+superfan_gpu_enabled: False
+superfan_gpu_fan_settings: {0: 20, 60: 30, 65: 35, 70: 40, 80: 45, 90: 50 }

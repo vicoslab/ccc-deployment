@@ -1,0 +1,3 @@
+dependencies:
+  - role: nvidia
+    when: superfan_gpu_enabled|bool

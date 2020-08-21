@@ -1,0 +1,39 @@
+- name: Deploy docker network
+  docker_network:
+    name: "{{ net_iter.name }}"
+    driver: bridge
+    ipam_config:
+      - subnet: "{{ net_iter.subnet }}"
+        gateway: "{{ net_iter.gateway }}"
+    driver_options:
+      com.docker.network.bridge.name: "{{ net_iter.internal_name }}"
+  with_items: "{{ docker_networks }}"
+  loop_control: {loop_var: net_iter}
+  
+# Restrict any access outside of the container except for the GATEWAY to the internet
+- name: Allow GATEWAY packets    
+  iptables:
+    state: "{{ 'present' if net_iter.restriction_enabled else 'absent' }}"
+    action: insert
+    chain: DOCKER-USER
+    in_interface: "{{ net_iter.internal_name }}"
+    source: "{{ net_iter.subnet }}"
+    destination: "{{ net_iter.allowed_gateway }}"
+    jump: ACCEPT
+  with_items: "{{ docker_networks }}"  
+  when: "'restricted_subnet' in net_iter.keys() | list"
+  loop_control: {loop_var: net_iter}
+  
+- name: Restrict SUBNET packets  
+  iptables:
+    state: "{{ 'present' if net_iter.restriction_enabled else 'absent' }}"
+    action: insert
+    chain: DOCKER-USER
+    in_interface: "{{ net_iter.internal_name }}"
+    source: "{{ net_iter.subnet }}"
+    destination: "{{ net_iter.restricted_subnet }}"
+    jump: DROP
+  with_items: "{{ docker_networks }}"
+  when: "'restricted_subnet' in net_iter.keys() | list"
+  loop_control: {loop_var: net_iter}
+    

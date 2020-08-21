@@ -1,0 +1,8 @@
+---
+# based on https://github.com/pantarei/ansible-role-cachefilesd
+
+- name: cachefilesd | restart service
+  service:
+    name: "cachefilesd"
+    state: "restarted"
+  when: cachefilesd_state != 'stopped'

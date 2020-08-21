@@ -1,0 +1,16 @@
+docker_portainer_publish_ip: 192.168.0.12
+patroller_publish_ip: 192.168.0.12
+
+netplan_iface:
+  - { interface: "eth0", addresses: ["192.168.0.12/24"], mac: "bc:3f:a6:fb:a1:65", gateway4: "192.168.0.1" }
+
+zfs_performance_tuning:
+  zfs_arc_max: 17179869184 # MAX memory for ZFS is 16GB
+  zfs_arc_min: 4294967296  # MIN memory for ZFS is 4GB
+zfs_zpools:
+  - {name: "scratch-disk", state: "present", type: "", atime: "off", devices: ["/dev/sdc","/dev/sde","/dev/sdf","/dev/sdn"],}
+zfs_volumes:
+  - { name: "nfs-cache",            zpool: "scratch-disk", state: "present", mountpoint: "/data/nfs-cache",  recordsize: "4K", compression: "lz4", logbias: "throughput", quota: "2T", xattr: "sa" }
+  - { name: "container-local-disk", zpool: "scratch-disk", state: "present", mountpoint: "/data/storage/ssd",    recordsize: "1M", compression: "lz4", logbias: "throughput" }
+
+superfan_gpu_enabled: False

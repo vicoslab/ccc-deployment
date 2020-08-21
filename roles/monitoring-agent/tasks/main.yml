@@ -1,0 +1,54 @@
+- name: monitoring-agent-gpu | deploying prom/node-exporter:v0.18.1
+  docker_container:
+    name: node_exporter
+    image: prom/node-exporter:v0.18.1
+    hostname: "{{ inventory_hostname }}"
+    state: started
+    command:
+      - "--path.rootfs=/host"
+      - "--web.listen-address=0.0.0.0:9100"
+    labels:
+      frp.enabled: "true"
+      frp.9100: "http"
+      frp.9100.http.subdomain: "{{ inventory_hostname }}-metrics"
+      frp.9100.http.locations: "/"
+      frp.9100.http.username: "{{ monitoring_agent_secure.user }}"
+      frp.9100.http.password: "{{ monitoring_agent_secure.pass }}"
+    exposed_ports: 9100
+    pid_mode: "host"
+    volumes:
+      - "/:/host:ro"
+    keep_volumes: no
+    restart_policy: unless-stopped
+    #network_mode: host    
+    networks:
+      - name: "{{ monitoring_agent_docker_network }}"
+    purge_networks: yes
+    pull: yes
+  when: monitoring_agent_enabled|bool
+
+- name: monitoring-agent-gpu | deploying mindprince/nvidia_gpu_prometheus_exporter:0.1
+  docker_container:
+    name: nvidia_exporter-mindprince
+    image: mindprince/nvidia_gpu_prometheus_exporter:0.1
+    hostname: "{{ inventory_hostname }}"
+    state: started
+    env:
+      LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1
+    volumes:
+      - "/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1"
+    labels:     
+      frp.enabled: "true"
+      frp.9445: "http"
+      frp.9445.http.subdomain: "{{ inventory_hostname }}-metrics"
+      frp.9445.http.locations: "/nvidia"
+      frp.9445.http.username: "{{ monitoring_agent_secure.user }}"
+      frp.9445.http.password: "{{ monitoring_agent_secure.pass }}"
+    exposed_ports: 9445
+    keep_volumes: no
+    restart_policy: unless-stopped
+    networks:
+      - name: "{{ monitoring_agent_docker_network }}"
+    purge_networks: yes
+    pull: yes
+  when: monitoring_agent_enabled_gpu|bool

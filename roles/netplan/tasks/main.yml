@@ -1,0 +1,14 @@
+- name: netplan | deploying ccc netplan interfaces
+  vars: 
+    netplan_interfaces: "{{ netplan_iface }}"
+  template:
+    src: 90-ccc-ansible.yaml.j2
+    dest: /etc/netplan/90-ccc-ansible.yaml
+  when: netplan_iface is defined and netplan_iface|length > 0
+  register: netplan_cfg
+
+  
+- name: netplan | appyling netplan
+  command: netplan apply
+  ignore_errors: false
+  when: netplan_cfg.changed

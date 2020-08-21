@@ -1,0 +1,128 @@
+- name: manage_zfs | install ZFS package
+  apt:
+    name: zfsutils-linux
+    state: latest 
+    update_cache: yes 
+  when: zfs_enabled|bool
+  
+- name: manage_zfs | get status of any existing zpools
+  # returns zpools.stdout and zfs_zpool_is_correct['zpool-name'] variables
+  block:
+    - name: manage_zfs | checking existing zpool(s)
+      shell: "zpool list | awk 'FNR >1' | awk '{print $1}'"
+      changed_when: false
+      register: zpools
+      check_mode: no
+
+    - name: manage_zfs | Gather ZPool Status
+      shell: zpool status
+      changed_when: false
+      register: zpool_devices
+      check_mode: no
+      with_items: "{{ zfs_zpools }}"
+      loop_control: {loop_var: zpool_item}
+
+    - name: manage_zfs | Gather ZPool Status into array
+      set_fact:
+        zpool_devices_arr: "{{ zpool_devices_arr | default({}) | combine( {zfs_iter.zpool_item.name: zfs_iter.stdout } ) }}"
+      with_items: "{{ zpool_devices.results }}"
+      loop_control: {loop_var: zfs_iter}
+  
+    - name: manage_zfs | create list of present/absent devices as zfs_zpool_is_correct vars
+      set_fact:
+        # will collect which devices are present or absent for each zpool
+        zfs_zpool_is_correct:  "{{ zfs_zpool_is_correct | default({}) | combine( {zfs_iter.0.name: zfs_zpool_is_correct[zfs_iter.0.name] | default([])  + [ zfs_iter.1 in zpool_devices_arr[zfs_iter.0.name] ] }) }}"
+      loop: "{{ zfs_zpools|subelements('devices') }}"
+      when: zfs_iter.0.name in zpools.stdout and zfs_iter.0.state == "present"
+      loop_control: {loop_var: zfs_iter}
+
+    - name: manage_zfs | create True/Fals flag for each required device as zfs_zpool_is_correct vars
+      set_fact:
+        # will check if all required devices are already present and update zfs_zpool_is_correct[zfs_iter.name] if they are not
+        zfs_zpool_is_correct:  "{{ zfs_zpool_is_correct | default({}) | combine( { zfs_iter.name: zfs_zpool_is_correct[zfs_iter.name] | map('int') | sum == zfs_iter.devices|count  } ) }}"
+      with_items: "{{ zfs_zpools }}"
+      when: zfs_iter.name in zpools.stdout and zfs_iter.state == "present"
+      loop_control: {loop_var: zfs_iter}
+      
+    - zpool_facts: pool={{ zfs_iter.name }}
+      with_items: "{{ zfs_zpools }}"
+      when: zfs_iter.name in zpools.stdout
+      loop_control: {loop_var: zfs_iter}
+  when: zfs_enabled|bool
+  
+
+- name: manage_zfs | remove zpool that does not match the required type and devices
+  command: "zpool destroy {{ zfs_iter.name }}"
+  register: zpool_destroyed
+  with_items: "{{ zfs_zpools }}"
+  when: 
+    - zfs_enabled|bool
+    - zfs_iter.name in zpools.stdout
+    - zfs_iter.state == "absent" or (zfs_iter.state == "present" and not zfs_zpool_is_correct[zfs_iter.name])
+  loop_control: {loop_var: zfs_iter}
+
+- name: manage_zfs | creating zpool(s)
+  command: "zpool create {{ zfs_iter.options | join (' ') if zfs_iter.options is defined else '' }} {{ zfs_iter.name }} {{ zfs_iter.type }} {{ zfs_iter.devices|join (' ') }}"
+  register: zpool_created
+  with_items: "{{ zfs_zpools }}"
+  when: 
+    - zfs_enabled|bool
+    - zfs_iter.state == "present"
+    - zfs_iter.name not in zpools.stdout or 
+      zfs_iter.name not in zfs_zpool_is_correct or 
+      not zfs_zpool_is_correct[zfs_iter.name]
+  loop_control: {loop_var: zfs_iter}
+  
+- name: manage_zfs | checking existing zpool(s) again
+  shell: "zpool list | awk 'FNR >1' | awk '{print $1}'"
+  changed_when: false
+  register: zpools
+  check_mode: no
+  when: zfs_enabled|bool
+  
+- name: manage_zfs | managing pools
+  zfs:
+    name: "{{ zfs_iter.name }}"
+    extra_zfs_properties:
+      atime: "{{ zfs_iter.atime|default(omit) }}"
+      compression: "{{ zfs_iter.compression|default(omit) }}"
+      dedup: "{{ zfs_iter.dedup|default(omit) }}"
+      primarycache: "{{ zfs_iter.primarycache|default(omit) }}"
+      quota: "{{ zfs_iter.quota|default(omit) }}"
+      recordsize: "{{ zfs_iter.recordsize|default(omit) }}"
+      sharenfs: "{{ zfs_iter.sharenfs|default(omit) }}"
+      sync: "{{ zfs_iter.sync|default(omit) }}"
+      xattr: "{{ zfs_iter.xattr|default(omit) }}"
+    state: "{{ zfs_iter.state }}"
+  with_items: "{{ zfs_zpools }}"
+  when: zfs_enabled|bool and zfs_iter.name in zpools.stdout
+  loop_control: {loop_var: zfs_iter}
+  
+- name: manage_zfs | managing volumes
+  zfs:
+    name: "{{ zfs_iter.zpool }}/{{ zfs_iter.name }}"
+    extra_zfs_properties:
+      compression: "{{ zfs_iter.compression|default(omit) }}"
+      dedup: "{{ zfs_iter.dedup|default(omit) }}"
+      quota: "{{ zfs_iter.quota|default(omit) }}"
+      primarycache: "{{ zfs_iter.primarycache|default(omit) }}"
+      recordsize: "{{ zfs_iter.recordsize|default(omit) }}"
+      sync: "{{ zfs_iter.sync|default(omit) }}"
+      logbias: "{{ zfs_iter.logbias|default(omit) }}"
+      volsize: "{{ zfs_iter.volsize|default(omit) }}"
+      mountpoint: "{{ zfs_iter.mountpoint|default(omit) }}"
+      xattr: "{{ zfs_iter.xattr|default(omit) }}"
+    state: "{{ zfs_iter.state }}"
+  with_items: "{{ zfs_volumes }}"
+  when: zfs_enabled|bool and zfs_iter.zpool in zpools.stdout
+  loop_control: {loop_var: zfs_iter}
+
+- name: manage_zfs | deploy performance tunning options
+  template:
+    src: zfs.conf.j2
+    dest: /etc/modprobe.d/zfs.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: zfs_enabled|bool and zfs_performance_tuning.keys()|length > 0
+      

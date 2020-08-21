@@ -1,0 +1,22 @@
+- name: Deploy container for FRP client
+  docker_container:
+    name: "{{fprc_iter.container_name}}"
+    image: "{{frpc_image_version}}"
+    env:
+      FRPC_SERVER_ADDRESS: "{{ frpc_server }}"
+      FRPC_SERVER_PORT: "{{ frpc_port | string }}"
+      FRPC_AUTH_TOKEN: "{{ frpc_secure.auth_token }}"
+      FRPC_PREFIX: "{{ inventory_hostname }}"
+      FRPC_LOGFILE: "/var/log/frpc/{{fprc_iter.log_name}}"
+      FRPC_LOG_LEVEL: "info"
+      FRPC_NETWORK: "{{fprc_iter.network_name}}"
+    volumes:
+      - "/var/log/frpc:/var/log/frpc"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - name: "{{fprc_iter.network_name}}"
+    purge_networks: yes
+    restart_policy: always
+    pull: yes
+  with_items: "{{frpc_networks}}"
+  loop_control: { loop_var: fprc_iter}

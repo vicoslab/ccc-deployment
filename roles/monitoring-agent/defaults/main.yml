@@ -1,0 +1,3 @@
+monitoring_agent_enabled: True
+monitoring_agent_enabled_gpu: True
+monitoring_agent_docker_network: default

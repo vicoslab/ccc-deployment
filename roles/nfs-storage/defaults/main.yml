@@ -1,0 +1,4 @@
+nfs_user_name: nfs-user
+nfs_user_id: 1000
+nfs_mounts:
+#  - {  path: "/mount/on/host", src: "192.168.0.10:/path/on/nfs", opts: "auto,fsc", state: "mounted"}

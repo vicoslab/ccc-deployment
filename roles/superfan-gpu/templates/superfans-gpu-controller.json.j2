@@ -1,0 +1,7 @@
+{
+    "fan_settings" : {
+{% for k in superfan_settings_vals.keys()|sort %}
+        "{{k}}": {{ superfan_settings_vals[k] }}{{ "," if not loop.last else "" }}
+{% endfor %}        
+    }
+}

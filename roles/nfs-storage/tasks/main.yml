@@ -1,0 +1,30 @@
+- name: Create vicos NFS group
+  group: name="{{ nfs_user_name }}" gid={{ nfs_user_id }}
+  when: nfs_mounts|length > 0
+  
+- name: Create vicos NFS user    
+  user:  
+    name: "{{ nfs_user_name }}"
+    create_home: no
+    password_lock: yes
+    uid: "{{ nfs_user_id }}"
+    group: "{{ nfs_user_name }}"
+    comment: ViCoS NFS user
+  when: nfs_mounts|length > 0
+  
+- name: Install nfs-common needed to mount the nfs
+  apt: name=nfs-common
+  when: nfs_mounts|length > 0
+  
+- name: Mount all NFS storages
+  mount:
+    fstype: nfs
+    opts: "{{nfs_iter.opts}}"
+    dump: "0"
+    passno: "0"
+    state: "{{nfs_iter.state | default('mounted')}}"
+    src: "{{nfs_iter.src}}"
+    path: "{{nfs_iter.path}}"
+  with_items: "{{nfs_mounts}}"
+  loop_control: {loop_var: nfs_iter}
+

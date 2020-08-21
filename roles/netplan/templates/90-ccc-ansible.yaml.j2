@@ -1,0 +1,29 @@
+network:
+    ethernets:
+{% for inet in netplan_interfaces %}
+      {{ inet.interface }}:
+{% if 'addresses' in inet %}
+        addresses:
+{% for addr in inet.addresses %}
+        - {{ addr }}
+{% endfor %}
+{% if 'gateway4' in inet %}
+        gateway4: "{{ inet.gateway4 }}"
+{% endif %}
+{% if 'gateway6' in inet %}
+        gateway6: "{{ inet.gateway4 }}"
+{% endif %}
+{% if 'nameservers' in inet %}
+        nameservers:
+          addresses: [ {% for ns in inet.nameservers %}"{{ ns }}"{{ ", " if not loop.last else " " }}{% endfor %} ]
+{% endif %}
+        dhcp4: no
+{% else %}
+        dhcp4: yes
+{% endif %}        
+        match:
+            macaddress: {{ inet.mac }}
+        mtu: 1500
+        set-name: {{ inet.interface }}
+{% endfor %}
+    version: 2

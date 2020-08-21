@@ -1,0 +1,47 @@
+# Deploy docker, frp-client and nfs-storage
+- hosts: "{{ machines }}"
+  become: yes
+  become_user: root
+  vars:
+    default_roles:
+      - netplan
+      - docker
+      - frp-client
+      - zfs
+      - cachefilesd
+      - nfs-storage
+      - superfan-gpu
+      - monitoring-agent
+      - compute-container-nightwatch
+      - patroller
+      - sshd-hostkey
+    only_roles_: "{{ only_roles | default('') }}"
+    roles_to_deploy: "{{ only_roles_.split(',') if only_roles_|length > 0 else default_roles }}"
+
+  tasks:
+    - name: include any user supplied variable files (e.g., secrets)
+      include_vars: dir={{ vars_file_item }}
+      with_items: "{{ vars_file.split(',') }}"
+      loop_control: {loop_var: vars_file_item}
+      when: vars_file is defined
+      
+    - name: including main role
+      include_role:
+        name: "{{ role_item }}"
+        allow_duplicates: no
+      # iterate over roles_to_deploy BUT ignore 'sshd-hostkey' which is NOT a role but a task below
+      with_items: "{{ roles_to_deploy }}"
+      loop_control: {loop_var: role_item}
+      when: role_item != 'sshd-hostkey'
+
+    - name: sshd-hostkey | install default hostkey that will be used by sshd within containers
+      block:
+        - file: path="{{ mount_points.local.sshd_data }}/keys" state=directory mode=0700 owner=root
+        - copy: content="{{ sshd_secure.rsa.private }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_rsa_key" mode=0644 owner=root
+        - copy: content="{{ sshd_secure.rsa.public }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_rsa_key.pub" mode=0644 owner=root
+        - copy: content="{{ sshd_secure.ecdsa.private }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ecdsa_key" mode=0644 owner=root
+        - copy: content="{{ sshd_secure.ecdsa.public }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ecdsa_key.pub" mode=0644 owner=root
+        - copy: content="{{ sshd_secure.ed25519.private }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ed25519_key" mode=0644 owner=root
+        - copy: content="{{ sshd_secure.ed25519.public }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ed25519_key.pub" mode=0644 owner=root
+      when: "'sshd-hostkey' in roles_to_deploy"
+

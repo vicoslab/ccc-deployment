@@ -1,0 +1,30 @@
+deployment_containers:
+#  - STACK_NAME: container-name
+#    USER_EMAIL: user@email.com
+#    CONTAINER_IMAGE: registry.vicos.si/vicos/ccc-base:ubuntu18.04-cuda10.1
+#    DEPLOYMENT_NODES: ['lab_node1','lab_node2']
+#    INSTALL_PACKAGES: "nano htop zip unzip rar unrar openjdk-8-jdk"
+#    SHM_SIZE: 2GB
+#    FRP_PORTS:
+#      TCP: [22,]
+#      HTTP: 
+#        - { port: "6006", subdomain: "<http-subdomain>", pass: "<http-pass>", health_check: "false", subdomain_hostname_prefix: true }
+
+deployment_types:
+#  student: 
+#    network_access: restricted
+#    default_nodes: ['student_node1']
+#    allowed_nodes: ['student_node1','student_node2','student_node3'] 
+#  researcher: 
+#    network_access: unlimited
+#    default_nodes: ['lab_node1']
+#    allowed_nodes: ['lab_node1','lab_node2','lab_node3'] 
+
+deployment_users:
+#  user@email.com:
+#    USER_FULLNAME: Your Name
+#    USER_EMAIL: user@email.com
+#    USER_NAME: <username>
+#    USER_PUBKEY: <openssh-public-key>
+#    USER_PUBKEY_FROM_GITHUB: <optional-github-username>
+#    USER_TYPE: researcher

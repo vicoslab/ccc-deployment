@@ -1,0 +1,23 @@
+# {{ ansible_managed }}
+
+# Defaults for cachefilesd initscript
+# sourced by /etc/init.d/cachefilesd
+
+# You must uncomment the run=yes line below for cachefilesd to start.
+# Before doing so, please read /usr/share/doc/cachefilesd/howto.txt.gz as
+# extended user attributes need to be enabled on the cache filesystem.
+RUN=yes
+
+# Additional options that are passed to the Daemon.
+DAEMON_OPTS="{{ cachefilesd_daemon_opts | default("") }}"
+
+# Time to wait for the server to die, in seconds. If this value is set too low
+# you might not let some servers to die gracefully and 'restart' will not work.
+DIETIME={{ cachefilesd_die_time | default(10) }}
+
+# Time to wait for the server to start, in seconds. If this value is set each
+# time the server is started (on start or restart) the script will stall to try
+# to determine if it is running. If it is not set and the server takes time to
+# setup a pid file the log message might be a false positive (says it did not
+# start when it actually did)
+STARTTIME={{ cachefilesd_start_time | default(2) }}

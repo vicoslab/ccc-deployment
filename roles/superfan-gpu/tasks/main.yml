@@ -1,0 +1,64 @@
+- name: superfans-gpu-controller | dependency install
+  apt:
+    name: ['ipmitool','python3-pip','make','git']
+    state: latest 
+    update_cache: yes 
+  when: superfan_gpu_enabled|bool
+  
+- name: superfans-gpu-controller | modprobe ipmi_devintf
+  modprobe: name=ipmi_devintf state=present
+  when: superfan_gpu_enabled|bool
+    
+- name: superfans-gpu-controller | populate service facts
+  service_facts:
+  
+- name: superfans-gpu-controller | clone from https://github.com/skokec/superfans-gpu-controller.git
+  git: 
+    repo: 'https://github.com/skokec/superfans-gpu-controller.git'
+    dest: /opt/superfans-gpu-controller
+    version: v0.1
+    update: yes
+  register: superfans_gpu_git
+  when: superfan_gpu_enabled|bool
+  
+- name: superfans-gpu-controller | make uninstall of current version
+  become: yes
+  become_user: root
+  block: 
+    - make: chdir=/opt/superfans-gpu-controller target=uninstall
+    - make: chdir=/opt/superfans-gpu-controller target=clean
+  when:
+    - "'superfans-gpu-controller.service' in services"
+    - superfans_gpu_git.changed or not (superfan_gpu_enabled|bool)
+
+  
+- name: superfans-gpu-controller | make install
+  become: yes
+  become_user: root
+  make: 
+    chdir: /opt/superfans-gpu-controller
+    target: install
+  register: superfans_gpu_install
+  when: 
+    - superfan_gpu_enabled|bool
+    - superfans_gpu_git.changed or 'superfans-gpu-controller.service' not in services
+  
+- name: superfans-gpu-controller | populate service facts (updated)
+  service_facts:
+  
+- name: superfans-gpu-controller | configuration
+  vars: 
+    superfan_settings_vals: "{{ superfan_gpu_fan_settings }}"
+  template:
+    src: superfans-gpu-controller.json.j2
+    dest: /etc/superfans-gpu-controller.json
+  register: superfans_gpu_cfg
+  when: "'superfans-gpu-controller.service' in services"
+        
+- name: superfans-gpu-controller | restart service
+  service: 
+    name: superfans-gpu-controller
+    state: restarted
+  when: 
+    - "'superfans-gpu-controller.service' in services"
+    - superfans_gpu_cfg.changed or superfans_gpu_install.changed or services['superfans-gpu-controller.service'].state != 'running'

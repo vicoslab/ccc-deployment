@@ -1,0 +1,135 @@
+# Create needed local HDD/SSD folders
+- name: Create local HDD/SSD storage folders for the user on worker node
+  file: path={{filepath}} state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
+  with_items:
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}"
+  loop_control: {loop_var: filepath}
+
+# Create folder for USER storage data on NFS storage
+- name: Create/ensure dir for user files on NFS storage
+  file: "{{file_items}}"
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  with_items:
+    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}", state: directory}
+    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings", state: directory}
+  loop_control: {loop_var: file_items}
+
+- name: Create default user-settings yaml file (if does not exsit) and load it if exists
+  block:
+    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      register: custom_user_settings_file
+
+    - template:
+        src: user-settings.yml
+        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      become: True
+      become_user: "{{ nfs_user_name }}"
+      run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+      when: not custom_user_settings_file.stat.exists
+
+    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      register: custom_user_settings_file
+      until: "'content' in custom_user_settings_file"
+      delay: 2
+
+- name: Add user-defined custom config and check if container should be deployed
+  block:
+    - set_fact: custom_user_settings={{ custom_user_settings_file.content | b64decode | from_yaml  }}
+    # container_custom has user-supplied values but we still use container for variables that user should newer define (e.g., STACK_NAME, USER_TYPE, ...)
+    - set_fact: container_custom={{ container | combine(custom_user_settings[container.STACK_NAME] | default({}), recursive=True) }}
+    - set_fact: deployment_servers={{ container_custom.DEPLOYMENT_NODES | default(deployment_types[container.USER_TYPE].default_nodes) }}
+    - set_fact: container_state=absent
+    - set_fact: container_state=started
+      when:
+        - inventory_hostname in deployment_servers
+        - inventory_hostname in deployment_types[container.USER_TYPE].allowed_nodes
+
+- name: Gather all public keys of one user
+  block:
+    - set_fact:
+        USER_PUBKEY_LIST: []
+    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + container_custom.USER_PUBKEY.split('\n') }}"
+      when: "'USER_PUBKEY' in container_custom and container_custom.USER_PUBKEY|length>0"
+    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://github.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
+      when: "'USER_PUBKEY_FROM_GITHUB' in container_custom and container_custom.USER_PUBKEY_FROM_GITHUB|length>0"
+    - set_fact: USER_PUBKEY_STR="{{ USER_PUBKEY_LIST | join('\n') }}"
+
+# Deploy the stack on each worker node
+- name: Deploy container {{ container.STACK_NAME }}
+  throttle: 1
+  docker_container:
+    name: "{{ container.STACK_NAME }}"
+    image: "{{ container_custom.CONTAINER_IMAGE }}"
+    state: "{{ container_state }}"
+    #recreate: yes
+    hostname: "{{ inventory_hostname }}-{{ container.STACK_NAME }}"
+    # NOTE: need to pass labels as string of python dict so that HTTP_PORT
+    #       is correctly used in the key
+    labels: |
+      {
+      {% for TCP_PORT in container_custom.FRP_PORTS.TCP %}
+       "frp.{{ TCP_PORT }}": "tcp",
+       "frp.{{ TCP_PORT }}.health_check": "false",
+      {% endfor %}
+      "frp.enabled": "true",
+      "frp.notify_email": "{{ container.USER_EMAIL }}",
+      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}
+      "frp.{{ HTTP_PORT.port }}": "http",
+        {% if HTTP_PORT.subdomain_hostname_prefix|default(true)|bool %}
+      "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ inventory_hostname }}-{{ HTTP_PORT.subdomain }}",
+        {% else %}
+      "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ HTTP_PORT.subdomain }}",
+        {% endif %}
+        {% if 'pass' in HTTP_PORT.keys() %}
+      "frp.{{ HTTP_PORT.port }}.http.username": "{{ container_custom.USER_NAME }}",
+      "frp.{{ HTTP_PORT.port }}.http.password": "{{ HTTP_PORT.pass }}",
+        {% endif %}
+      "frp.{{ HTTP_PORT.port }}.health_check": "{{ HTTP_PORT.health_check if 'health_check' in HTTP_PORT.keys() else 'false' }}",
+      {% endfor %}
+      "ccc-user.name": "{{ container.USER_FULLNAME }}",
+      "ccc-user.email": "{{ container.USER_EMAIL }}",
+      "ccc-user.mentor": "{{ container.USER_MENTOR | default(omit) }}"
+      }
+    exposed_ports: |
+      [
+      {% for TCP_PORT in container_custom.FRP_PORTS.TCP %}
+      "{{ TCP_PORT }}",
+      {% endfor %}
+      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}
+      "{{ HTTP_PORT.port }}",
+      {% endfor %}
+      ]
+    shm_size: "{{ container_custom.SHM_SIZE | default('2gb') }}"
+    env:
+      USER_NAME: "{{ container_custom.USER_NAME }}"
+      USER_ID: '{{ nfs_user_id | string }}'
+      USER_PUBKEY: "{{ USER_PUBKEY_STR }}"
+      INSTALL_PACKAGES: "{{ container_custom.INSTALL_PACKAGES | default('') }}"
+      INSTALL_REPOSITORY_KEYS: "{{ container_custom.INSTALL_REPOSITORY_KEYS | default('') }}"
+      INSTALL_REPOSITORY_SOURCES: "{{ container_custom.INSTALL_REPOSITORY_SOURCES | default('') }}"
+      RUNIT_STATUS_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.status"
+      RUNIT_WORKING_ENV_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.env-backup"
+      APPS:
+        "/opt/apps/MATLAB/latest/bin/matlab:\
+        /opt/apps/pycharm/latest/bin/pycharm.sh:\
+        /opt/apps/clion/latest/bin/clion.sh:\
+        /opt/apps/sublime/latest/sublime_text"
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}:/home/{{ container_custom.USER_NAME }}"
+      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings:/home/{{ container_custom.USER_NAME }}/.containers"
+      - "{{ mount_points.nfs.apps_data }}:/opt/apps/:ro"
+      - "{{ mount_points.nfs.dataset_data }}:/storage/common-datasets"
+      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}/:/storage/local/hdd"
+      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}/:/storage/local/ssd"
+      - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"
+    keep_volumes: no
+    networks:
+      - name: "{{ docker_net_accesses[deployment_types[container.USER_TYPE].network_access] }}"
+      - name: "claims"
+    purge_networks: yes
+    pull: yes
+

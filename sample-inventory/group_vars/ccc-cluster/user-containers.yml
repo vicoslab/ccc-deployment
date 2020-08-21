@@ -1,0 +1,11 @@
+deployment_containers:
+  - STACK_NAME: your-container-name
+    USER_EMAIL: yourname@email.com
+    CONTAINER_IMAGE: registry.vicos.si/vicos/ccc-x2go:ubuntu18.04-cuda10.1    
+    DEPLOYMENT_NODES: ['node2']
+    INSTALL_PACKAGES: "nano htop zip unzip rar unrar openjdk-8-jdk"
+    SHM_SIZE: 2GB
+    FRP_PORTS:
+      TCP: [22,]
+      HTTP: 
+        - { port: "6006", subdomain: "your-container-name", pass: "password", health_check: "false", subdomain_hostname_prefix: true }

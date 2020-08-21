@@ -1,0 +1,23 @@
+all:
+  children:
+    ccc-cluster:
+      hosts:
+        yournode1:
+          ansible_host: yournode1.yourdomain.com
+          ansible_user: user
+        yournode2:
+          ansible_host: yournode2.yourdomain.com
+          ansible_user: user
+        yournode3:
+          ansible_host: yournode2.yourdomain.com
+          ansible_user: user
+
+    pool1-nodes:
+      hosts:
+        yournode1:
+        yournode2:
+
+    pool2-nodes:
+      hosts:
+        yournode2:
+        yournode3:

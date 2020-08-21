@@ -1,0 +1,8 @@
+- name: docker registry login 
+  docker_login:
+    registry_url: "{{ reg_iter }}"
+    username: "{{ docker_secure.registry_auth[reg_iter].username }}"
+    password: "{{ docker_secure.registry_auth[reg_iter].password }}"
+  with_items: "{{ docker_registries }}"
+  loop_control: {loop_var: reg_iter}
+  

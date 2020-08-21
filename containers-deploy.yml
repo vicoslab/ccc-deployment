@@ -1,0 +1,16 @@
+# Deploy compute-container for each entry in config/user-containers.yml
+- hosts: "{{ machines }}"
+  become: yes
+  become_user: root
+  tasks: 
+    - name: Deploy container for each entry in user-containers.yml config file   
+      vars: 
+        container: "{{ deployment_users[container_iter.USER_EMAIL] | default({}) | combine(container_iter) }}"
+      include_role: name=compute-container
+      with_items: "{{ deployment_containers }}"
+      loop_control: {loop_var: container_iter}
+      when:
+         (containers is not defined and users is not defined) or
+         (containers is defined and container_iter.STACK_NAME in containers.split(",")) or
+         (users is defined and deployment_users[container_iter.USER_EMAIL].USER_EMAIL in users.split(","))
+      

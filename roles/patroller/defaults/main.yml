@@ -1,0 +1,4 @@
+patroller_image_version: vicos/patroller:latest
+patroller_lease: 30
+patroller_network: default
+patroller_publish_ip: 127.0.0.1

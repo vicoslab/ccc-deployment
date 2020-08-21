@@ -1,0 +1,21 @@
+# TODO: temporary install drivers 418 and docker 5:18.09 until server is re-installed
+nvidia_driver_version: "418"
+docker_version: "5:18.09.2~3-0~ubuntu-xenial"
+docker_nvidia_plugin: False
+
+docker_portainer_publish_ip: 192.168.0.10
+patroller_publish_ip: 192.168.0.10
+
+netplan_iface:
+  - { interface: "eth0", addresses: ["192.168.0.10/24"], mac: "6c:b4:6b:a5:cf:3c", gateway4: "192.168.0.1" }
+  
+zfs_performance_tuning:
+  zfs_arc_max: 8589934592 # MAX memory for ZFS is 8GB
+  zfs_arc_min: 2147483648  # MIN memory for ZFS is 2GB
+zfs_zpools:
+  - {name: "scratch-disk", state: "present", type: "", atime: "off", devices: ["/dev/sda","/dev/sdb","/dev/sdc","/dev/sde",],}
+zfs_volumes:
+  - { name: "nfs-cache",            zpool: "scratch-disk", state: "present", mountpoint: "/data/nfs-cache",  recordsize: "4K", compression: "no", logbias: "throughput", quota: "2T", xattr: "sa" }
+  - { name: "container-local-disk", zpool: "scratch-disk", state: "present", mountpoint: "/data/storage/hdd",    recordsize: "128K", compression: "no", logbias: "throughput" }
+
+superfan_gpu_enabled: True

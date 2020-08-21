@@ -1,0 +1,6 @@
+frpc_server: your.proxy.com
+frpc_port: 7000
+frpc_image_version: lukacu/frpc:latest
+frpc_networks:
+  - { network_name: "default", container_name: "frp-client-service", log_name: "frpc.log"}
+

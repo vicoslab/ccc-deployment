@@ -1,0 +1,89 @@
+#!/bin/bash
+
+CONFIG_CHECK_TIMEOUT=3
+GIT_CHECK_TIMEOUT=30
+
+watched_folder="{{ watched_folders }}"
+checkout_folder="/home/{{ ansible_user }}/.ansible/pull/{{ inventory_hostname }}-global-change"
+checkout_url="{{ ansible_pull_url }}"
+checkout_branch="{{ ansible_pull_branch }}"
+inventory_dir="$checkout_folder/{{ ansible_pull_inventory_dir }}"
+playbook="{{ ansible_pull_playbook }}"
+
+cd $watched_folder
+
+declare -A last_runs
+
+last_git_check=$(date +%s)
+
+echo "Waiting for changes in $watched_folder/{{ watched_folders_pattern }} .."
+while :
+do
+        updated=0
+        
+        # do update on all containers if git repository changed                
+        do_check=0
+        if [ ! -d $checkout_folder ] ; then do_check=1; fi
+
+        if [ $do_check -eq 0 ] && [ $(date +%s) -ge $((last_git_check + $GIT_CHECK_TIMEOUT)) ] 
+        then
+            last_git_check=$(date +%s)
+            
+            cd $checkout_folder 
+            git remote update > /dev/null 2>&1 
+            git status -uno | grep -q 'Your branch is behind' && do_check=1
+            cd $watched_folder
+
+        fi
+
+        if [ $do_check -eq 1 ]
+        then
+            echo "##################################################################################################"
+            echo "Calling ansible due to change in git repository" && updated=1
+            echo ""
+            echo ""
+            ansible-pull -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs --only-if-changed
+            
+            
+        fi
+        # then do updates on per-container basis
+        for watched_file in $(find . -maxdepth {{ watched_folders_max_depth }}  -wholename '{{ watched_folders_pattern }}') ;
+        do
+                IFS=/ read var1 user_id container_id <<< "$watched_file"
+                # get last run datetime (or assign current time if not found before)
+                if [ ${last_runs[$user_id]+_} ]; then                 
+                    last_run=${last_runs[$user_id]}
+                else
+                    last_run=$(date +%s)
+                fi
+                
+                # get date of file modification
+                last_modified=$(date +%s -r $watched_file)
+                
+                # activate update if file modified after last run
+                if [ $last_modified -ge $((last_run + 5)) ] ; then
+                        last_run=$(date +%s)
+                        echo "##################################################################################################"
+                        echo "Calling ansible due to change in $watched_file" && updated=1
+                        echo ""
+                        echo ""
+                        
+                        ansible-pull -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id --track-subs
+                        
+                fi
+                
+                last_runs[$user_id]=$last_run
+        done
+        
+        if [ $updated -eq 1 ]
+        then
+            echo "##################################################################################################"
+            echo "##################################################################################################"
+            echo ""
+            echo "Waiting for changes in $watched_folder/{{ watched_folders_pattern }} .."
+            echo ""
+            echo ""
+        fi
+        sleep $CONFIG_CHECK_TIMEOUT
+        
+done

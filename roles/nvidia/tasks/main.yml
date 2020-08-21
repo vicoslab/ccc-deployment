@@ -1,0 +1,29 @@
+- name: install nvidia if requested
+  when: nvidia_enabled|bool
+  block:  
+  - name: Add repo for proprietary nvidia drivers
+    apt_repository:
+      repo: ppa:graphics-drivers/ppa
+      state: present
+  
+  - name: Update apt and install nvidia-driver
+    apt: 
+      update_cache: yes 
+      name: ["nvidia-driver-{{nvidia_driver_version}}",  "nvidia-headless-{{nvidia_driver_version}}", "nvidia-utils-{{nvidia_driver_version}}"] 
+      state: present
+    register: aptkey
+    
+  - name: Install service that will put GPUs into the presistent mode at startup time (default service does not)
+    template: src=nvidia-persistenced.service dest=/lib/systemd/system/nvidia-persistenced.service
+    
+  - name: reboot machine if new driver installed
+    reboot:
+    when: aptkey.changed 
+  
+  - name: Reload nvidia-persistenced.service
+    systemd:    
+      name: nvidia-persistenced.service
+      state: restarted
+      daemon_reload: yes
+    when: aptkey.changed
+  

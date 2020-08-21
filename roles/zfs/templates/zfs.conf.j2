@@ -1,0 +1,3 @@
+{% for key, value in zfs_performance_tuning.items()  %}
+options zfs {{ key }}={{ value }}
+{% endfor %}

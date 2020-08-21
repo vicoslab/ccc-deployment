@@ -1,0 +1,14 @@
+[Unit]
+Description=Container Nightwatch
+After=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+User={{ ansible_user }}
+ExecStart={{ container_nightwatch_bin }}
+
+[Install]
+WantedBy=multi-user.target

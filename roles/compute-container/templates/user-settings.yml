@@ -1,0 +1,24 @@
+##
+# Conda Compute Cluster user customisable settings:
+#
+#  CONTAINER_IMAGE: docker container that is compatible with Conda Compute Container
+#  INSTALL_PACKAGES: comma seperated list of apt-get packages
+#  INSTALL_REPOSITORY_KEYS: comma seperated list of repositry keys
+#  INSTALL_REPOSITORY_SOURCES: comma seperated list of repositry sources
+#  SHM_SIZE: docker shared memory size
+#  USER_NAME: username within container (and user for HTTP access)
+#  USER_PUBKEY: SSH public key
+#  USER_PUBKEY_FROM_GITHUB: GitHub user from where public key is loaded
+
+# Uncomment lines below to change settings (cluster automaically updates containers in around one minute)
+# 
+#{{container.STACK_NAME}}:
+#  CONTAINER_IMAGE: "{{ container.CONTAINER_IMAGE }}"
+#  DEPLOYMENT_NODES: {{ container.DEPLOYMENT_NODES | default("[]") }}
+#  INSTALL_PACKAGES: "{{ container.INSTALL_PACKAGES  | default() }}"
+#  INSTALL_REPOSITORY_KEYS: "{{ container.INSTALL_REPOSITORY_KEYS | default() }}"
+#  INSTALL_REPOSITORY_SOURCES: "{{ container.INSTALL_REPOSITORY_SOURCES  | default() }}"
+#  SHM_SIZE: {{ container.SHM_SIZE }}
+#  USER_NAME: "{{ container.USER_NAME }}"
+#  USER_PUBKEY: "{{ container.USER_PUBKEY | default() }}"
+#  USER_PUBKEY_FROM_GITHUB: "{{ container.USER_PUBKEY_FROM_GITHUB | default()  }}"

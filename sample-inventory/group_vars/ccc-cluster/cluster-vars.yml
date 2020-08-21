@@ -1,0 +1,113 @@
+nvidia_driver_version: "440"
+nvidia_enabled: True
+
+docker_version: "5:19.03.8~3-0~ubuntu-bionic"
+docker_networks:
+  - { name: "lab-unrestricted", subnet: "172.20.0.0/16", gateway: "172.20.0.1", internal_name: "docker_lab"}
+  - { name: "student-restricted", subnet: "173.20.0.0/16", gateway: "173.20.0.1", internal_name: "docker_student", restricted_subnet: "192.168.0.0/16", allowed_gateway: "192.168.0.1", restriction_enabled: True}
+  - { name: "claims", subnet: "174.20.0.0/16", gateway: "174.20.0.1", internal_name: "claims", restricted_subnet: "192.168.0.0/16", allowed_gateway: "192.168.0.1", restriction_enabled: True}
+docker_net_accesses:
+  restricted: "student-restricted"
+  unlimited: "lab-unrestricted"
+docker_nvidia_plugin: True
+docker_portainer_agent: True
+docker_registries: ["your-registry.yourdomain.org"]
+
+
+frpc_server: proxy.yourdomain.org
+frpc_port: 7000
+frpc_image_version: lukacu/frpc:latest
+frpc_networks:
+  - { network_name: "lab-unrestricted", container_name: "frp-lab-client-service", log_name: "frpc-lab.log"}
+  - { network_name: "student-restricted", container_name: "frp-student-client-service", log_name: "frpc-student.log"}
+
+patroller_image_version: registry.vicos.si/vicos/patroller:latest
+patroller_lease: 30
+patroller_network: claims
+
+
+cachefilesd_state: started # stopped or started
+cachefilesd_cache_folder: /data/nfs-cache
+cachefilesd_brun: 6% # cannot be below 6%
+cachefilesd_bcull: 3%
+cachefilesd_bstop: 1%
+cachefilesd_frun: 6% # cannot be below 6%
+cachefilesd_fcull: 3%
+cachefilesd_fstop: 1%
+# Additional options that are passed to the Daemon.
+#cachefilesd_daemon_opts: ""
+# Time to wait for the server to die, in seconds.
+#cachefilesd_die_time: 10
+# Time to wait for the server to start, in seconds.
+#cachefilesd_start_time: 2
+
+# host mount points
+mount_points:
+  nfs:
+    user_data: /data/shared_storage/user_data
+    apps_data: /data/shared_storage/apps
+    dataset_data: /data/shared_storage/datasets
+  local:
+    hdd_data: /data/storage/hdd
+    ssd_data: /data/storage/ssd
+    sshd_data: /data/storage/sshd
+
+
+# user name and UID that has access to NFS server
+nfs_user_name: nfs-user
+nfs_user_id: 1000
+nfs_mounts:
+  - {  path: "{{ mount_points.nfs.user_data | string }}", src: "192.168.0.100:/nfs/home", opts: "auto,fsc", state: "mounted"}
+  - {  path: "{{ mount_points.nfs.apps_data }}", src: "192.168.0.100:/nfs/apps", opts: "auto,ro,async,fsc" , state: "mounted"}
+  - {  path: "{{ mount_points.nfs.dataset_data }}", src: "192.168.0.100:/nfs/datasets", opts: "auto,async,fsc", state: "mounted" }
+
+superfan_gpu_enabled: False
+superfan_gpu_fan_settings: {0: 20, 60: 30, 65: 35, 70: 40, 75: 45, 77: 48, 80: 51, 83: 55, 90: 60 }
+
+monitoring_agent_enabled: True
+monitoring_agent_enabled_gpu: True
+monitoring_agent_docker_network: student-restricted
+
+compute_container_nightwatch: True
+compute_container_nightwatch_git_url: https://dev.vicos.si/vicos/ccc-inventory
+compute_container_nightwatch_git_intentory_dir: inventory
+compute_container_nightwatch_git_playbook_dir: playbook
+compute_container_nightwatch_git_branch: master
+
+################################################################
+# Authentication strings can be provided in additional file that can
+# be encrypted using ansible-vault
+#
+# CAUTION: all root key names have "_secure" suffix !!!
+#
+
+# The following keys are used by roles:
+#
+# docker_secure:
+#  registry_auth:
+#     <your.registry.com>:
+#       username: "<username>"
+#       password: "<password>"
+#  potrainer_agent_token: "SECRET_TOKEN"
+#
+# frpc_secure:
+#   auth_token: "<auth_token>"
+#
+# monitoring_agent_secure:
+#   user: ...
+#   pass: ...
+#
+# compute_container_nightwatch_secure:
+#   git_token:
+#
+# sshd_secure:
+#   rsa:
+#     private: ...
+#     public: ...
+#   ecdsa:
+#     private: ...
+#     public: ...
+#   ed25519:
+#     private: ...
+#     public: ...
+#

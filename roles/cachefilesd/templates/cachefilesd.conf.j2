@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+
+###############################################################################
+#
+# Copyright (C) 2006,2010 Red Hat, Inc. All Rights Reserved.
+# Written by David Howells (dhowells@redhat.com)
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version
+# 2 of the License, or (at your option) any later version.
+#
+###############################################################################
+
+dir {{ cachefilesd_cache_folder | default("/var/cache/fscache") }}
+tag {{ inventory_hostname }}-cache
+brun {{ cachefilesd_brun | default("10%") }}
+bcull {{ cachefilesd_bcull | default("7%") }}
+bstop {{ cachefilesd_bstop | default("3%") }}
+frun {{ cachefilesd_frun | default("10%") }}
+fcull {{ cachefilesd_fcull | default("7%") }}
+fstop {{ cachefilesd_fstop | default("3%") }}
+
+# Assuming you're using SELinux with the default security policy included in
+# this package
+secctx system_u:system_r:cachefiles_kernel_t:s0
