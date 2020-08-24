@@ -1,6 +1,39 @@
 # Ansible deployment for Conda Compute Cluster
 
-Ansible based playbooks for the deployment and orchestration of the Conda Compute Cluster. Two playbooks are available:
+Ansible based playbooks for the deployment and orchestration of the Conda Compute Cluster. 
+
+## Conda Compute Cluster features:
+
+Conda Compute Cluster (CCC) has been developed by [ViCoS UL, FRI](https://vicos.si) to enable deep learning researches a semaless migration between different GPU servers when working on specific projects. Main features of Conda Compute Cluster are:
+
+* Running multiple docker containers on different hosts simultainously.
+* Seamless transition from one host to another.
+* SSH access to containers through reverse proxy ([FRP proxy](https://github.com/fatedier/frp)).
+* Designed for running Conda enviroment on NVIDIA GPUs for deep learning research.
+
+Containers are based on [Conda Compute Containers](https://github.com/vicoslab/ccc-images) that enable seamless transition from one host to another due to: 
+* Home folder mounted on common shared storage .
+* Forbidden modification of non-home files.
+* Users can modify certain propreties from withing container:
+  * can modify container image (must be based on `vicos/ccc-base:latest`)
+  * can modify apt packages, repositories and soruces installed at container boot
+  * can modify on which hosts to deploy containers
+* Pre-installed Miniconda on /home/USER/Conda.
+
+
+Cluster management is done through a single ansible script and enables deployment of the following features:
+
+* Automatic deployment of containers uppon change of config.
+* Using NFS with FS-cache for shared storage.
+* Management of local disk with ZFS.
+* Harwdware monitoring and management:
+  * automatic management of system FANs when using SUPERMICRO server based on GPU temperature ([Sperfans GPU Controller](https://github.com/skokec/superfans-gpu-controller))
+  * monitoring of GPU and CPU reported as Prometheus metrics
+  * monitoring of GPU usage for automatic reservation using [patroller](https://github.com/vicoslab/patroller)
+
+## Deplyoment playbooks
+
+Two playbooks are available that deploy Conda Compute Cluster and Containers:
 
 * `cluster-deploy.yml`: deployment of cluster infrastructure (network, docker, FRP client, ZFS, NFS, FS-Cache, HW monitoring, GPU fan controlers, etc.)
 * `containers-deploy.yml`: depyloment of compute containers based on Conda Compute Container (CCC) images
@@ -9,14 +42,14 @@ Ansible based playbooks for the deployment and orchestration of the Conda Comput
 
 Run the following command to deploy the infrastructure:
 ```bash
-ansible-playbook cluster-deploy.yml -i <path-to-invenotry> \
+ansible-playbook cluster-deploy.yml -i <path-to-inventory> \
                  --vault-password-file <path-to-secret> -e vars_file=<path-to-secret-vars-dir> \
                  -e machines=<node-or-group-pattern> \
                  -e only_roles=<list of roles> 
 ```
 
 #### Inventory/nodes:
-You can specifcy the cluster definition in the supplied inventory folder. See `sample-invenotry` for example. Tasks are deployed on the nodes defined by the `-e machines=<node-or-group-pattern>`. 
+You can specifcy the cluster definition in the supplied inventory folder. See `sample-inventory` for example. Tasks are deployed on the nodes defined by the `-e machines=<node-or-group-pattern>`. 
 
 #### Roles:
 By default all roles are executed in the order as specifid below. Deployment can be limited to only specific roles by supplying `-e only_roles=<list of roles>`. List of roles can be comma seperated list of role names:
@@ -29,7 +62,7 @@ By default all roles are executed in the order as specifid below. Deployment can
 * `superfan-gpu`: [superfans GPU controller](roles/superfan-gpu/tasks/main.yml) for regulating SYSTEM FANs based on GPU temperature
 * `monitoring-agent`: [HW monitoring](roles/monitoring-agent/tasks/main.yml) for providing Prometheus metrics of CPU and GPUs
 * `compute-container-nightwatch`: [CCC nightwatch](roles/compute-container-nightwatch/tasks/main.yml) for providing automatic updated of the compute container upon changes to to the Ansible config or user-supplied config
-* `patroller`: [GPU Patroler](roles/patroller/tasks/main.yml) for automatic GPU reservation system based on (https://github.com/vicoslab/patroller)[https://github.com/vicoslab/patroller]
+* `patroller`: [GPU Patroler](roles/patroller/tasks/main.yml) for automatic GPU reservation system based on [https://github.com/vicoslab/patroller](https://github.com/vicoslab/patroller)
 * `sshd-hostkey`: not an actual role but a minor task to deploy ssh-daemon keys for CCC containers
 
 #### Example of the cluster-wide config organization:
@@ -44,13 +77,13 @@ Example of how to provide cluster configurations is in the `sample-inventory` fo
 Cluster-wide settings contain principal configuration of the whole cluster and are sectioned into settings for individual roles. Settings are used both by the `cluster-deploy.yml` and `containers-deploy.yml` playbooks. 
 
 ##### Cluster secrets 
-Cluster secrets are stored in seperate `vault_vars` folder and should not be in present in `group_vars` to allow running `containers-deploy.yml` without needing vault secret. Secrets can be instead loaded for cluster deployment using `-e vars_file=<path-to-secret-vars-dir>` which will load vars only for `cluster-deploy.yml` playbook.
+Cluster secrets are stored in a seperate `vault_vars` folder and should not be in present in `group_vars` to allow running `containers-deploy.yml` without needing vault secret. Secrets can be instead loaded for cluster deployment using `-e vars_file=<path-to-secret-vars-dir>` which will load vars only for `cluster-deploy.yml` playbook.
 
 ## Deploy compute containers
 
 Run the following command to deploy compute containers:
 ```bash
-ansible-playbook containers-deploy.yml -i <path-to-invenotry> \
+ansible-playbook containers-deploy.yml -i <path-to-inventory> \
                  -e machines=<node-or-group-pattern> \
                  -e containers=<list of STACK_NAME> \
                  -e users=<list of USER_EMAIL>
@@ -67,7 +100,7 @@ To limit the deployment of only specific containers two additional filters can b
 
 #### Container deployment config:
 
-List of containers for deployment and list of users are stored need to be set in the invenotry configuration:
+List of containers for deployment and list of users are stored need to be set in the inventory configuration:
 
 * yaml variable `deployment_containers`: list of containers for deployment (e.g., see [`group_vars/ccc-cluster/user-containers.yml`](sample-inventory/group_vars/ccc-cluster/user-containers.yml))
 * yaml variable `deployment_users`: list of users for deployment (e.g., see [`group_vars/ccc-cluster/user-list.yml`](sample-inventory/group_vars/ccc-cluster/user-list.yml))
