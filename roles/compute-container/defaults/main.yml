@@ -1,7 +1,7 @@
 deployment_containers:
 #  - STACK_NAME: container-name
 #    USER_EMAIL: user@email.com
-#    CONTAINER_IMAGE: registry.vicos.si/vicos/ccc-base:ubuntu18.04-cuda10.1
+#    CONTAINER_IMAGE: vicoslab/ccc:base-ubuntu18.04-cuda10.1
 #    DEPLOYMENT_NODES: ['lab_node1','lab_node2']
 #    INSTALL_PACKAGES: "nano htop zip unzip rar unrar openjdk-8-jdk"
 #    SHM_SIZE: 2GB
