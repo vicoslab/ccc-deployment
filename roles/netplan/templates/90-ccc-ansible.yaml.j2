@@ -21,6 +21,15 @@ network:
 {% else %}
         dhcp4: yes
 {% endif %}        
+{% if 'routes' in inet %}
+        routes:
+{% for route in inet.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          metric: {{ route.metric|default(100) }}
+{% endfor %}
+        
+{% endif %}
         match:
             macaddress: {{ inet.mac }}
         mtu: 1500
