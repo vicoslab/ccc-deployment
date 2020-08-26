@@ -4,11 +4,18 @@ CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
 
 watched_folder="{{ watched_folders }}"
-checkout_folder="/home/{{ ansible_user }}/.ansible/pull/{{ inventory_hostname }}-global-change"
+ansible_pull_cache="/home/{{ ansible_user }}/.ansible/pull/"
+checkout_folder="$ansible_pull_cache/{{ inventory_hostname }}-global-change"
 checkout_url="{{ ansible_pull_url }}"
 checkout_branch="{{ ansible_pull_branch }}"
 inventory_dir="$checkout_folder/{{ ansible_pull_inventory_dir }}"
 playbook="{{ ansible_pull_playbook }}"
+
+# clear cache before starting
+if [ -d "$ansible_pull_cache" ]; then
+    rm -rf "$ansible_pull_cache/*"
+    echo "Cleared git cache folder $ansible_pull_cache before starting."
+fi
 
 cd $watched_folder
 
@@ -43,7 +50,6 @@ do
             echo ""
             echo ""
             ansible-pull -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs --only-if-changed
-            
             
         fi
         # then do updates on per-container basis
