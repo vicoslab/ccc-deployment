@@ -2,8 +2,8 @@
 - name: Create local HDD/SSD storage folders for the user on worker node
   file: path={{filepath}} state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
   with_items:
-    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}"
-    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}"
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
   loop_control: {loop_var: filepath}
 
 # Create folder for USER storage data on NFS storage
@@ -13,24 +13,24 @@
   become_user: "{{ nfs_user_name }}"
   run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
   with_items:
-    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}", state: directory}
+    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}", state: directory}
     - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings", state: directory}
   loop_control: {loop_var: file_items}
 
 - name: Create default user-settings yaml file (if does not exsit) and load it if exists
   block:
-    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
       register: custom_user_settings_file
 
     - template:
         src: user-settings.yml
-        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
       become: True
       become_user: "{{ nfs_user_name }}"
       run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
       when: not custom_user_settings_file.stat.exists
 
-    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
       register: custom_user_settings_file
       until: "'content' in custom_user_settings_file"
       delay: 2
@@ -119,12 +119,12 @@
         /opt/apps/sublime/latest/sublime_text"
     restart_policy: unless-stopped
     volumes:
-      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}:/home/{{ container_custom.USER_NAME }}"
+      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"
       - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings:/home/{{ container_custom.USER_NAME }}/.containers"
       - "{{ mount_points.nfs.apps_data }}:/opt/apps/:ro"
       - "{{ mount_points.nfs.dataset_data }}:/storage/common-datasets"
-      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}/:/storage/local/hdd"
-      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STACK_NAME }}/:/storage/local/ssd"
+      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}/:/storage/local/hdd"
+      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}/:/storage/local/ssd"
       - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"
     keep_volumes: no
     networks:
