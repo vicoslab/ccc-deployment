@@ -19,18 +19,18 @@
 
 - name: Create default user-settings yaml file (if does not exsit) and load it if exists
   block:
-    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
+    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
       register: custom_user_settings_file
-
+    
     - template:
         src: user-settings.yml
-        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
+        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
       become: True
       become_user: "{{ nfs_user_name }}"
       run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
       when: not custom_user_settings_file.stat.exists
 
-    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}.yml"
+    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
       register: custom_user_settings_file
       until: "'content' in custom_user_settings_file"
       delay: 2
