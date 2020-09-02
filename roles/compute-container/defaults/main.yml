@@ -18,7 +18,7 @@ deployment_types:
 #    default_nodes: ['student_node1']
 #    allowed_nodes: ['student_node1','student_node2','student_node3'] 
 #  researcher: 
-#    network_access: unlimited
+#    network_access: unrestricted
 #    default_nodes: ['lab_node1']
 #    allowed_nodes: ['lab_node1','lab_node2','lab_node3'] 
 
@@ -45,3 +45,7 @@ mount_points:
 compute_container_apps:
 #  - '/usr/local/bin/YOUR_APP'
 #  - '/usr/local/bin/YOUR_SECOND_APP'
+
+compute_container_networks:
+#  restricted: [ { name: "network1" }, { name: "shared_network"} ]
+#  unrestricted: [ {name: "network2" }, { name: "shared_network"} ]
