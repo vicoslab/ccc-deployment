@@ -2,9 +2,6 @@ docker_version: "5:19.03.8~3-0~ubuntu-bionic"
 docker_networks:
 #  - { name: "unrestricted", subnet: "172.20.0.0/16", gateway: "172.20.0.1", internal_name: "docker_ccc"}
 #  - { name: "restricted", subnet: "173.20.0.0/16", gateway: "173.20.0.1", internal_name: "docker_ccc_restricted", restricted_subnet: "192.168.0.0/16", allowed_gateway: "192.168.1.1", restriction_enabled: True}
-docker_net_accesses:
-#  restricted: "restricted"
-#  unlimited: "unrestricted"
 docker_nvidia_plugin: False
 docker_portainer_agent: False
 docker_portainer_publish_ip: 127.0.0.1
