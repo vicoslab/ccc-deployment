@@ -114,11 +114,8 @@
       INSTALL_REPOSITORY_SOURCES: "{{ container_custom.INSTALL_REPOSITORY_SOURCES | default('') }}"
       RUNIT_STATUS_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.status"
       RUNIT_WORKING_ENV_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.env-backup"
-      APPS:
-        "/opt/apps/MATLAB/latest/bin/matlab:\
-        /opt/apps/pycharm/latest/bin/pycharm.sh:\
-        /opt/apps/clion/latest/bin/clion.sh:\
-        /opt/apps/sublime/latest/sublime_text"
+      APPS: "{{ compute_container_apps|join(':') }}"
+        
     restart_policy: unless-stopped
     volumes:
       - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"

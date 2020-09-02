@@ -41,3 +41,7 @@ mount_points:
 #    hdd_data: ''
 #    ssd_data: ''
 #    sshd_data: ''
+
+compute_container_apps:
+#  - '/usr/local/bin/YOUR_APP'
+#  - '/usr/local/bin/YOUR_SECOND_APP'
