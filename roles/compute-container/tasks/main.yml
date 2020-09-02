@@ -64,6 +64,8 @@
     name: "{{ container.STACK_NAME }}"
     image: "{{ container_custom.CONTAINER_IMAGE }}"
     state: "{{ container_state }}"
+    privileged: "{{ container.RUN_PRIVILEGED|default(False)|bool }}"
+    security_opts: "{{ ['seccomp:unconfined'] if container.RUN_PRIVILEGED|default(False)|bool else [] }}"
     #recreate: yes
     hostname: "{{ inventory_hostname }}-{{ container.STACK_NAME }}"
     # NOTE: need to pass labels as string of python dict so that HTTP_PORT
