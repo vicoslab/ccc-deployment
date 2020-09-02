@@ -67,7 +67,7 @@
     privileged: "{{ container.RUN_PRIVILEGED|default(False)|bool }}"
     security_opts: "{{ ['seccomp:unconfined'] if container.RUN_PRIVILEGED|default(False)|bool else [] }}"
     #recreate: yes
-    hostname: "{{ inventory_hostname }}-{{ container.STACK_NAME }}"
+    hostname: "{{ inventory_hostname }}"
     # NOTE: need to pass labels as string of python dict so that HTTP_PORT
     #       is correctly used in the key
     labels: |
@@ -115,6 +115,9 @@
       RUNIT_STATUS_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.status"
       RUNIT_WORKING_ENV_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.env-backup"
       APPS: "{{ compute_container_apps|join(':') }}"
+      CONTAINER_NAME: "{{ container.STACK_NAME }}"
+      CONTAINER_NODE: "{{ inventory_hostname }}"
+      CONTAINER_IMAGE: "{{ container_custom.CONTAINER_IMAGE }}"
         
     restart_policy: unless-stopped
     volumes:
