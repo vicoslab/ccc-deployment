@@ -1,9 +1,11 @@
 deployment_containers:
 #  - STACK_NAME: container-name
+#    STORAGE_NAME: container-name
 #    USER_EMAIL: user@email.com
 #    CONTAINER_IMAGE: vicoslab/ccc:base-ubuntu18.04-cuda10.1
 #    DEPLOYMENT_NODES: ['lab_node1','lab_node2']
 #    INSTALL_PACKAGES: "nano htop zip unzip rar unrar openjdk-8-jdk"
+#    RUN_PRIVILEGED: False
 #    SHM_SIZE: 2GB
 #    FRP_PORTS:
 #      TCP: [22,]
@@ -28,3 +30,14 @@ deployment_users:
 #    USER_PUBKEY: <openssh-public-key>
 #    USER_PUBKEY_FROM_GITHUB: <optional-github-username>
 #    USER_TYPE: researcher
+
+mount_points:
+  nfs:
+#    user_data: ''
+#    group_data: ''
+#    apps_data: ''
+#    dataset_data: ''
+  local:
+#    hdd_data: ''
+#    ssd_data: ''
+#    sshd_data: ''
