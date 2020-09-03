@@ -118,7 +118,17 @@
       CONTAINER_NAME: "{{ container.STACK_NAME }}"
       CONTAINER_NODE: "{{ inventory_hostname }}"
       CONTAINER_IMAGE: "{{ container_custom.CONTAINER_IMAGE }}"
+      CONTAINER_WELCOME_MSG: |2
+         * Pre-installed APPS: '{{ compute_container_apps| map('regex_replace', '^(?P<path>.+,)', '') | map('basename') | map('splitext') | map('first') | unique| sort | join(' ') }}'
         
+        Available shared and local storage:
+         * /storage/user         * /storage/local/hdd
+         * /storage/group        * /storage/local/ssd
+         * /storage/datasets
+        
+        Container config: '/home/{{ container_custom.USER_NAME }}/.container/{{container.STACK_NAME}}.yml'
+        
+    
     restart_policy: unless-stopped
     volumes:
       - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"
