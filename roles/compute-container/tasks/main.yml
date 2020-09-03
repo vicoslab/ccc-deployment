@@ -137,8 +137,8 @@
       - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}:/storage/user"
       - "{{ mount_points.nfs.group_data}}:/storage/group{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
       - "{{ mount_points.nfs.dataset_data }}:/storage/datasets{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
-      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}/:/storage/local/hdd"
-      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}/:/storage/local/ssd"
+      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}:/storage/local/hdd"
+      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
       - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"
     keep_volumes: no
     networks: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
