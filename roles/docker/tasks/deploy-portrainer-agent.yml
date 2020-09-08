@@ -11,6 +11,6 @@
       - /var/lib/docker/volumes:/var/lib/docker/volumes
     ports: 
       - "{{docker_portainer_publish_ip}}:9001:9001/tcp"
-    restart_policy: always
+    restart_policy: unless-stopped
     pull: yes
   when: docker_portainer_agent|bool

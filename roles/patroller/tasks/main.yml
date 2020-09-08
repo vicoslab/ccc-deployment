@@ -16,5 +16,5 @@
     pid_mode: host
     privileged: True
     purge_networks: yes
-    restart_policy: always
+    restart_policy: unless-stopped
     pull: yes
