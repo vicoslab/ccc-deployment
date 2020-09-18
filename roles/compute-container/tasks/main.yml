@@ -2,8 +2,8 @@
 - name: Create local HDD/SSD storage folders for the user on worker node
   file: path={{filepath}} state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
   with_items:
-    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
-    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}"
   loop_control: {loop_var: filepath}
 
 # Create folder for USER storage data on NFS storage
