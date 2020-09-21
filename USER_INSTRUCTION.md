@@ -9,9 +9,9 @@ Default access to the contianer is through **SSH with the private/public key**. 
 Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile) image that provides:
  * Miniconda (at `/home/USER/conda`) and python 3
  * SSH access
- * Optional installation of apt packages during startup (see, below)
+ * Optional installation of apt packages during startup ([see below](#container-customization))
 
-Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/repository/docker/vicoslab/ccc/general). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software (see, instructions below).
+Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/repository/docker/vicoslab/ccc/general). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
 
 ### Container data and mount-points
 
@@ -31,9 +31,9 @@ The following storage runs on NFS and is accessible from all containers running 
 
 ### Container packages and software
 
-New packages can only be installed using Conda and/or pip to local home folder. Due to shared home folder this enables software installed on one node to be immediately avialable on other nodes where containers are running. 
+New packages can only be installed using Conda and/or pip to local home folder. Due to shared home folder this enables software installed on one node to be immediately available on other nodes where containers are running. 
 
-**Privilaged access and `sudo` is disabled.** Additional apt-get packages can be installed through container customization or through custom docker images.
+**Privilaged access and `sudo` are disabled.** Additional apt-get packages can be installed through container customization or through custom docker images.
 
 ## Container customization
 
