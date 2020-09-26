@@ -39,6 +39,7 @@ do
             cd $checkout_folder 
             git remote update > /dev/null 2>&1 
             git status -uno | grep -q 'Your branch is behind' && do_check=1
+            git pull 
             cd $watched_folder
 
         fi
@@ -49,7 +50,7 @@ do
             echo "Calling ansible due to change in git repository" && updated=1
             echo ""
             echo ""
-            ansible-pull -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs --only-if-changed
+            ansible-pull -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs
             
         fi
         # then do updates on per-container basis
