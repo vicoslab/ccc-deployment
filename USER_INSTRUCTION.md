@@ -11,7 +11,7 @@ Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc
  * SSH access
  * Optional installation of apt packages during startup ([see below](#container-customization))
 
-Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/repository/docker/vicoslab/ccc/general). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
+Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/r/vicoslab/ccc). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
 
 ### Container data and mount-points
 
