@@ -75,7 +75,7 @@ do
                         echo ""
                         echo ""
                         
-                        ansible-pull -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id --track-subs
+                        ansible-pull -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id
                         
                 fi
                 
