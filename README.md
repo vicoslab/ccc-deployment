@@ -157,3 +157,4 @@ User informations can be centralized in separate file for quick reuse. Container
 ## TODO list:
 
 - [ ] enable of redirection of container loging output to the user 
+- [ ] enable limitation of containers to specific GPUs (need to wait for ansible support first)
