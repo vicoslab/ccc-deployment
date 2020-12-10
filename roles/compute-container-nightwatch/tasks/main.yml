@@ -1,5 +1,5 @@
 - name: install ansible-pull using needed for container nightwatcher
-  pip: name=ansible
+  pip: name=ansible>=2.10.4,docker>=4.3.0
 
 - name: ensure /etc/ansible/ exists
   file: path=/etc/ansible state=directory

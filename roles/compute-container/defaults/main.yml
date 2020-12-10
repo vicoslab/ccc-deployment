@@ -11,16 +11,20 @@ deployment_containers:
 #      TCP: [22,]
 #      HTTP: 
 #        - { port: "6006", subdomain: "<http-subdomain>", pass: "<http-pass>", health_check: "false", subdomain_hostname_prefix: true }
+#    ADDITIONAL_DEVICE_GROUPS: []
 
 deployment_types:
 #  student: 
 #    network_access: restricted
 #    default_nodes: ['student_node1']
 #    allowed_nodes: ['student_node1','student_node2','student_node3'] 
+#    allowed_device_groups: ['students']
 #  researcher: 
 #    network_access: unrestricted
 #    default_nodes: ['lab_node1']
 #    allowed_nodes: ['lab_node1','lab_node2','lab_node3'] 
+#    allowed_device_groups: ['lab']
+
 
 deployment_users:
 #  user@email.com:
@@ -49,3 +53,7 @@ compute_container_apps:
 compute_container_networks:
 #  restricted: [ { name: "network1" }, { name: "shared_network"} ]
 #  unrestricted: [ {name: "network2" }, { name: "shared_network"} ]
+
+compute_devices:
+#  students: ['GPUID1','GPUID2']
+#  lab: ['GPUID3','GPUID4']

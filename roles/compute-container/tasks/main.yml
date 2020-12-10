@@ -59,10 +59,20 @@
       when: "'USER_PUBKEY_FROM_GITHUB' in container_custom and container_custom.USER_PUBKEY_FROM_GITHUB|length>0"
     - set_fact: USER_PUBKEY_STR="{{ USER_PUBKEY_LIST | join('\n') }}"
 
+- name: Gather all allowed devices for this user
+  block:
+    - set_fact: ALLOWED_DEVICE_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_device_groups  }}"
+    - set_fact: ALLOWED_DEVICE_GROUPS="{{ ALLOWED_DEVICE_GROUPS|list + (container.ADDITIONAL_DEVICE_GROUPS | default([]) ) }}"
+      when: "'ADDITIONAL_DEVICE_GROUPS' in container"
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([]) + (compute_devices[group_id]| default([])) }}"
+      with_items: "{{ALLOWED_DEVICE_GROUPS}}"
+      loop_control: {loop_var: group_id}
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
+    
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
-  docker_container:
+  community.docker.docker_container:
     name: "{{ container.STACK_NAME }}"
     image: "{{ container_custom.CONTAINER_IMAGE }}"
     state: "{{ container_state }}"
@@ -129,7 +139,15 @@
          * /storage/datasets
         
         Container config: '/home/{{ container_custom.USER_NAME }}/.container/{{container.STACK_NAME}}.yml'
+
         
+    device_requests:
+      - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
+        driver: 'nvidia'
+        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else omit}}"
+        count: "{{ omit if compute_devices is defined else -1}}"
+        capabilities: 
+          - ['gpu']
     
     restart_policy: unless-stopped
     volumes:

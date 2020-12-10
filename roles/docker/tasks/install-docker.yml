@@ -22,6 +22,6 @@
 
 - name: Install Docker Module for Python
   pip:
-    name: docker
+    name: docker>=4.3.0
     
 
