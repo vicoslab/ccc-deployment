@@ -140,6 +140,8 @@
         
         Container config: '/home/{{ container_custom.USER_NAME }}/.container/{{container.STACK_NAME}}.yml'
 
+        FOR MORE DOCUMENTATION SEE: https://github.com/vicoslab/ccc-deployment/blob/master/USER_INSTRUCTION.md
+        
         
     device_requests:
       - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
