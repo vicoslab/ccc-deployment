@@ -19,3 +19,12 @@ zfs_volumes:
   - { name: "container-local-disk", zpool: "scratch-disk", state: "present", mountpoint: "/data/storage/hdd",    recordsize: "128K", compression: "no", logbias: "throughput" }
 
 superfan_gpu_enabled: True
+
+compute_devices:
+  device_lab: 
+    - 'GPU-332154c3-a422-5d49-ab24-d99aa048603e' # Quadro RTX 8000
+    - 'GPU-d13b524a-527b-bf13-518c-90715e1c5d65' # Quadro RTX 8000
+  device_student: 
+    - 'GPU-15415747-ad66-b677-5320-35ddb80d61de' # Quadro RTX 5000
+    - 'GPU-82678789-1fe3-2385-c3ed-eb2b32a3e177' # Quadro RTX 5000
+  

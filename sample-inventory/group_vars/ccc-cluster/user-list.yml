@@ -1,15 +1,18 @@
 # NOTE: 
-# USER_ACCESS-> "unlimited" == access to internal net, or, "restricted" == access to internet only (for students)
+#  - mapping between access and network can be defined in group_vars/ccc-cluster/cluster-vars.yml (see 'compute_container_networks' variable)
+#  - compute groups can be defined in host specific files in 'compute_devices' var (e.g., see host_vars/node1.yml)
 
 deployment_types:
   student: 
-    network_access: restricted
+    access: restricted
     default_nodes: ['node3'] 
     allowed_nodes: ['node3'] 
+    allowed_device_groups: ['device_student']
   researcher: 
-    network_access: unlimited
+    access: unlimited
     default_nodes: ['node1']
     allowed_nodes: ['node1','node2','node3']
+    allowed_device_groups: ['device_lab']
 
 deployment_users:
   yourname@email.com:
@@ -19,3 +22,4 @@ deployment_users:
     USER_PUBKEY: ""
     USER_PUBKEY_FROM_GITHUB: github_username
     USER_TYPE: researcher
+    ADDITIONAL_DEVICE_GROUPS: ['device_student']

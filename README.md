@@ -4,7 +4,7 @@ Ansible based playbooks for the deployment and orchestration of the Conda Comput
 
 ## Conda Compute Cluster features:
 
-Conda Compute Cluster (CCC) has been developed by [ViCoS UL, FRI](https://vicos.si) to enable deep learning researches a semaless migration between different GPU servers when working on specific projects. Main features of Conda Compute Cluster are:
+Conda Compute Cluster (CCC) has been developed by [ViCoS UL, FRI](https://vicos.si) to enable deep learning researches a seamless migration between different GPU servers when working on specific projects. Main features of Conda Compute Cluster are:
 
 * Running multiple docker containers on different hosts simultainously.
 * Seamless transition from one host to another.
@@ -136,7 +136,8 @@ User informations can be centralized in separate file for quick reuse. Container
 * `USER_MENTOR`: user's mentor (optional)
 * `USER_NAME`: username for the OS
 * `USER_PUBKEY`: SSH public key for access to the compute containre
-* `USER_ACCESS`: either 'unlimited' or 'restricted' (relates to LAN access, which should be restricted for outside users)
+* `USER_TYPE`: user group/type that restricts network, nodes and GPU devices (groups/types are defined in `deployment_types` key)
+* `ADDITIONAL_DEVICE_GROUPS`: allowed additional device groups besides ones defined by `USER_TYPE`
 
 ## Feature list
 
@@ -153,8 +154,9 @@ User informations can be centralized in separate file for quick reuse. Container
 - [x] prometheus export for monitoring of the HW (for CPU and GPU - GPU utilization, temperature, etc) 
 - [x] users can provide custom settings inside of the containers by editing ~/.containers/<STACK_NAME>.yml file
 - [x] compute-container-nightwatch that monitors ~/.containers/<STACK_NAME>.yml files and redeploys them using ansible-pull
+- [x] constraining to specific GPUs based on device groups and user group
 
 ## TODO list:
 
 - [ ] enable of redirection of container loging output to the user 
-- [ ] enable limitation of containers to specific GPUs (need to wait for ansible support first)
+

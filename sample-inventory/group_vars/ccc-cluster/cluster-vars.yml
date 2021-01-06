@@ -6,9 +6,6 @@ docker_networks:
   - { name: "lab-unrestricted", subnet: "172.20.0.0/16", gateway: "172.20.0.1", internal_name: "docker_lab"}
   - { name: "student-restricted", subnet: "173.20.0.0/16", gateway: "173.20.0.1", internal_name: "docker_student", restricted_subnet: "192.168.0.0/16", allowed_gateway: "192.168.0.1", restriction_enabled: True}
   - { name: "claims", subnet: "174.20.0.0/16", gateway: "174.20.0.1", internal_name: "claims", restricted_subnet: "192.168.0.0/16", allowed_gateway: "192.168.0.1", restriction_enabled: True}
-docker_net_accesses:
-  restricted: "student-restricted"
-  unlimited: "lab-unrestricted"
 docker_nvidia_plugin: True
 docker_portainer_agent: True
 docker_registries: ["your-registry.yourdomain.org"]
@@ -45,6 +42,7 @@ cachefilesd_fstop: 1%
 mount_points:
   nfs:
     user_data: /data/shared_storage/user_data
+    group_data: /data/shared_storage/group_data
     apps_data: /data/shared_storage/apps
     dataset_data: /data/shared_storage/datasets
   local:
@@ -58,15 +56,25 @@ nfs_user_name: nfs-user
 nfs_user_id: 1000
 nfs_mounts:
   - {  path: "{{ mount_points.nfs.user_data | string }}", src: "192.168.0.100:/nfs/home", opts: "auto,fsc", state: "mounted"}
+  - {  path: "{{ mount_points.nfs.group_data | string }}", src: "192.168.0.100:/nfs/group", opts: "auto,async,fsc", state: "mounted" }
   - {  path: "{{ mount_points.nfs.apps_data }}", src: "192.168.0.100:/nfs/apps", opts: "auto,ro,async,fsc" , state: "mounted"}
   - {  path: "{{ mount_points.nfs.dataset_data }}", src: "192.168.0.100:/nfs/datasets", opts: "auto,async,fsc", state: "mounted" }
 
+# fan settings mapping is from "°C" -> "% FAN speed" (CAUTION: >50% FAN settings are loud and above >60% EXTREMELY !! loud on SUPERMICRO 4029GP TRT2 and should be avoided !!)
 superfan_gpu_enabled: False
 superfan_gpu_fan_settings: {0: 20, 60: 30, 65: 35, 70: 40, 75: 45, 77: 48, 80: 51, 83: 55, 90: 60 }
 
 monitoring_agent_enabled: True
 monitoring_agent_enabled_gpu: True
 monitoring_agent_docker_network: student-restricted
+
+compute_container_networks:
+  restricted: [ { name: "student-restricted" }, { name: "claims"} ]
+  unrestricted: [ {name: "lab-unrestricted" }, { name: "claims"} ]
+
+compute_container_apps: 
+  - "/apps/MATLAB/bin/matlab"  
+  - "/apps/pycharm/bin/pycharm.sh"
 
 compute_container_nightwatch: True
 compute_container_nightwatch_git_url: https://github.com/vicoslab/ccc-inventory-example
