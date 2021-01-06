@@ -145,11 +145,13 @@
         
     device_requests:
       - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
+        # CAUTION: provide options={}, device_ids=[] and count=0 as default to ENABLE proper detection of changes in container
         driver: 'nvidia'
-        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else omit}}"
-        count: "{{ omit if compute_devices is defined else -1}}"
+        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else []}}"
+        count: "{{ 0 if compute_devices is defined else -1}}"
         capabilities: 
           - ['gpu']
+        options: "{{ dict() }}"
     
     restart_policy: unless-stopped
     volumes:
