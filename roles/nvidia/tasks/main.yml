@@ -27,3 +27,11 @@
       daemon_reload: yes
     when: aptkey.changed
   
+  - name: Prevent unattended updates for nvidia drivers
+    lineinfile:
+      path: /etc/apt/apt.conf.d/50unattended-upgrades
+      line: '        "nvidia-*";'
+      insertafter: "Unattended-Upgrade::Package-Blacklist {"
+      firstmatch: yes
+      create: no
+    ignore_errors: yes # do not complain if file does not exist
