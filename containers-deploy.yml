@@ -9,7 +9,6 @@
       include_role: name=compute-container
       with_items: "{{ deployment_containers }}"
       loop_control: {loop_var: container_iter}
-      ignore_errors: yes
       when:
          (containers is not defined and users is not defined) or
          (containers is defined and container_iter.STACK_NAME in containers.split(",")) or

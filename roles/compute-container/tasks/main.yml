@@ -72,6 +72,7 @@
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
+  ignore_errors: yes
   community.docker.docker_container:
     name: "{{ container.STACK_NAME }}"
     image: "{{ container_custom.CONTAINER_IMAGE }}"
