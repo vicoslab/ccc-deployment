@@ -68,14 +68,29 @@
       with_items: "{{ALLOWED_DEVICE_GROUPS}}"
       loop_control: {loop_var: group_id}
     - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
-    
+
+- name: Ensure that used container does exists
+  block: 
+  - set_fact: CONTAINER_IMAGE="{{ container_custom.CONTAINER_IMAGE }}"  
+  - name: Check if requested docker image exists
+    community.docker.docker_image:
+      name: "{{ CONTAINER_IMAGE }}"
+      source: pull
+  rescue: # use original container and provide IMAGE error to user
+    - set_fact: CONTAINER_IMAGE="{{ container.CONTAINER_IMAGE }}"
+    - name: setting CONTAINER_REPORT_IMAGE_ERROR
+      set_fact: 
+        CONTAINER_REPORT_IMAGE_ERROR: |2
+          
+          
+          IMAGE ERROR: CANNOT FIND '{{container_custom.CONTAINER_IMAGE}}', reverted to DEFAULT image !!
+  
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
-  ignore_errors: yes
   community.docker.docker_container:
     name: "{{ container.STACK_NAME }}"
-    image: "{{ container_custom.CONTAINER_IMAGE }}"
+    image: "{{ CONTAINER_IMAGE }}"
     state: "{{ container_state }}"
     privileged: "{{ container.RUN_PRIVILEGED|default(False)|bool }}"
     security_opts: "{{ ['seccomp:unconfined'] if container.RUN_PRIVILEGED|default(False)|bool else [] }}"
@@ -130,7 +145,7 @@
       APPS: "{{ compute_container_apps|join(':') }}"
       CONTAINER_NAME: "{{ container.STACK_NAME }}"
       CONTAINER_NODE: "{{ inventory_hostname }}"
-      CONTAINER_IMAGE: "{{ container_custom.CONTAINER_IMAGE }}"
+      CONTAINER_IMAGE: "{{ CONTAINER_IMAGE }}"
       CONTAINER_WELCOME_MSG: |2
          * Pre-installed APPS: '{{ compute_container_apps| map('regex_replace', '^(?P<path>.+,)', '') | map('basename') | map('splitext') | map('first') | unique| sort | join(' ') }}'
         
@@ -141,7 +156,7 @@
         
         Container config: '/home/{{ container_custom.USER_NAME }}/.container/{{container.STACK_NAME}}.yml'
 
-        FOR MORE DOCUMENTATION SEE: https://github.com/vicoslab/ccc-deployment/blob/master/USER_INSTRUCTION.md
+        FOR MORE DOCUMENTATION SEE: https://github.com/vicoslab/ccc-deployment/blob/master/USER_INSTRUCTION.md{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}
         
         
     device_requests:
