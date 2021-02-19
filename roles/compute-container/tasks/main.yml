@@ -64,6 +64,7 @@
     - set_fact: ALLOWED_DEVICE_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_device_groups  }}"
     - set_fact: ALLOWED_DEVICE_GROUPS="{{ ALLOWED_DEVICE_GROUPS|list + (container.ADDITIONAL_DEVICE_GROUPS | default([]) ) }}"
       when: "'ADDITIONAL_DEVICE_GROUPS' in container"
+    - set_fact: ALLOWED_DEVICE_ID="{{ [] }}"
     - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([]) + (compute_devices[group_id]| default([])) }}"
       with_items: "{{ALLOWED_DEVICE_GROUPS}}"
       loop_control: {loop_var: group_id}
