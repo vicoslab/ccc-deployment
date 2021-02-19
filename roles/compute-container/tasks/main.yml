@@ -68,7 +68,9 @@
       with_items: "{{ALLOWED_DEVICE_GROUPS}}"
       loop_control: {loop_var: group_id}
     - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
-
+- debug:
+    msg: "{{ALLOWED_DEVICE_ID}}"
+    
 - name: Ensure that used container does exists
   block: 
   - set_fact: CONTAINER_IMAGE="{{ container_custom.CONTAINER_IMAGE }}"  
