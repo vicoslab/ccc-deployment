@@ -8,11 +8,13 @@ deployment_types:
     default_nodes: ['node3'] 
     allowed_nodes: ['node3'] 
     allowed_device_groups: ['device_student']
+    allowed_private_data_groups: ['student']
   researcher: 
     access: unlimited
     default_nodes: ['node1']
     allowed_nodes: ['node1','node2','node3']
     allowed_device_groups: ['device_lab']
+    allowed_private_data_groups: ['student','lab']
 
 deployment_users:
   yourname@email.com:
@@ -23,3 +25,4 @@ deployment_users:
     USER_PUBKEY_FROM_GITHUB: github_username
     USER_TYPE: researcher
     ADDITIONAL_DEVICE_GROUPS: ['device_student']
+    ADDITIONAL_PRIVATE_DATA_GROUPS: ['your-private-project']

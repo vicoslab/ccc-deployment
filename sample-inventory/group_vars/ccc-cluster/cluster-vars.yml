@@ -45,6 +45,7 @@ mount_points:
     group_data: /data/shared_storage/group_data
     apps_data: /data/shared_storage/apps
     dataset_data: /data/shared_storage/datasets
+    private_data: /data/shared_storage/private_data
   local:
     hdd_data: /data/storage/hdd
     ssd_data: /data/storage/ssd
@@ -59,6 +60,7 @@ nfs_mounts:
   - {  path: "{{ mount_points.nfs.group_data | string }}", src: "192.168.0.100:/nfs/group", opts: "auto,async,fsc", state: "mounted" }
   - {  path: "{{ mount_points.nfs.apps_data }}", src: "192.168.0.100:/nfs/apps", opts: "auto,ro,async,fsc" , state: "mounted"}
   - {  path: "{{ mount_points.nfs.dataset_data }}", src: "192.168.0.100:/nfs/datasets", opts: "auto,async,fsc", state: "mounted" }
+  - {  path: "{{ mount_points.nfs.private_data }}", src: "192.168.0.100:/nfs/private", opts: "auto,async,fsc", state: "mounted" }
 
 # fan settings mapping is from "°C" -> "% FAN speed" (CAUTION: >50% FAN settings are loud and above >60% EXTREMELY !! loud on SUPERMICRO 4029GP TRT2 and should be avoided !!)
 superfan_gpu_enabled: False

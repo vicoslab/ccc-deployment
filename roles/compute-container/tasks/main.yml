@@ -70,7 +70,26 @@
       with_items: "{{ALLOWED_DEVICE_GROUPS}}"
       loop_control: {loop_var: group_id}
     - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
-    
+
+- name: Create list of volumes for mounting based on user access rights
+  block: 
+    - name: setting default CONTAINER_VOLUME_MOUNTS 
+      set_fact: 
+        CONTAINER_VOLUME_MOUNTS:
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings:/home/{{ container_custom.USER_NAME }}/.containers"
+          - "{{ mount_points.nfs.apps_data }}:/opt/apps/:ro"
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}:/storage/user"
+          - "{{ mount_points.nfs.group_data}}:/storage/group{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
+          - "{{ mount_points.nfs.dataset_data }}:/storage/datasets{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
+          - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}:/storage/local/hdd"
+          - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
+          - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"  
+    - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ mount_points.nfs.private_data + "/" + group_id +  ":/storage/private/" + group_id ] }}"
+      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
+      loop_control: {loop_var: group_id}      
+      
 - name: Ensure that used container does exists
   block: 
   - set_fact: CONTAINER_IMAGE="{{ container_custom.CONTAINER_IMAGE }}"  
@@ -86,7 +105,7 @@
           
           
           IMAGE ERROR: CANNOT FIND '{{container_custom.CONTAINER_IMAGE}}', reverted to DEFAULT image !!
-  
+         
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
@@ -172,16 +191,7 @@
         options: "{{ dict() }}"
     
     restart_policy: unless-stopped
-    volumes:
-      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"
-      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings:/home/{{ container_custom.USER_NAME }}/.containers"
-      - "{{ mount_points.nfs.apps_data }}:/opt/apps/:ro"
-      - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}:/storage/user"
-      - "{{ mount_points.nfs.group_data}}:/storage/group{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
-      - "{{ mount_points.nfs.dataset_data }}:/storage/datasets{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
-      - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}:/storage/local/hdd"
-      - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
-      - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"
+    volumes: "{{ CONTAINER_VOLUME_MOUNTS }}"
     keep_volumes: no
     networks: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
     purge_networks: yes
