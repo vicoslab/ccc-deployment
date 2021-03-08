@@ -89,6 +89,10 @@
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ mount_points.nfs.private_data + "/" + group_id +  ":/storage/private/" + group_id ] }}"
       with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
       loop_control: {loop_var: group_id}      
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ '/etc/timezone:/etc/timezone:ro', '/etc/localtime:/etc/localtime:ro'] }}"
+      when: "'USE_HOST_TIMEDATE' in container_custom and container_custom.USE_HOST_TIMEDATE|bool"
+      
+
       
 - name: Ensure that used container does exists
   block: 
