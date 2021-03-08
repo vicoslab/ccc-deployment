@@ -1,6 +1,8 @@
 nvidia_driver_version: "440"
 nvidia_enabled: True
 
+timezone_setting: Europe/Ljubljana
+
 docker_version: "5:19.03.8~3-0~ubuntu-bionic"
 docker_networks:
   - { name: "lab-unrestricted", subnet: "172.20.0.0/16", gateway: "172.20.0.1", internal_name: "docker_lab"}
