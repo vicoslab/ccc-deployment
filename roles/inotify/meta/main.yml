@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: John Freeman
+  description: Role for configuring Inotify.
+  company: GantSign Ltd.
+  license: MIT
+  min_ansible_version: 2.8
+  platforms:
+    - name: EL
+      versions:
+        - 7
+    - name: Ubuntu
+      versions:
+        - xenial
+        - bionic
+    - name: Debian
+      versions:
+        - stretch
+        - jessie
+  galaxy_tags:
+    - inotify
+    - sysctl
+    - system
+dependencies: []
