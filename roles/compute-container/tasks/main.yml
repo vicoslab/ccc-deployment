@@ -114,9 +114,6 @@
   community.docker.docker_host_info:
   register: docker_info
 
-- debug: 
-    msg: "{{ docker_info.host_info['ServerVersion'] is version('19.03', '>=') }}"
-
 - set_fact:
     DEVICE_REQUESTS:
       - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
