@@ -50,7 +50,7 @@ do
             echo "Calling ansible due to change in git repository" && updated=1
             echo ""
             echo ""
-            ansible-pull -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs
+            python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs
             
         fi
         # then do updates on per-container basis
@@ -75,7 +75,7 @@ do
                         echo ""
                         echo ""
                         
-                        ansible-pull -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id
+                        python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id
                         
                 fi
                 
