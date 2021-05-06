@@ -109,7 +109,27 @@
           
           
           IMAGE ERROR: CANNOT FIND '{{container_custom.CONTAINER_IMAGE}}', reverted to DEFAULT image !!
-         
+
+- name: Get info on docker host
+  community.docker.docker_host_info:
+  register: docker_info
+
+- debug: 
+    msg: "{{ docker_info.host_info['ServerVersion'] is version('19.03', '>=') }}"
+
+- set_fact:
+    DEVICE_REQUESTS:
+      - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
+        # CAUTION: provide options={}, device_ids=[] and count=0 as default to ENABLE proper detection of changes in container
+        driver: 'nvidia'
+        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else []}}"
+        count: "{{ 0 if compute_devices is defined else -1}}"
+        capabilities: 
+          - ['gpu']
+        options: "{{ dict() }}"
+  # make sure to skip device_requests if Docker API does not support it (i.e. Docker server version above 19.03 is OK)
+  when: "{{ docker_info.host_info['ServerVersion'] is version('19.03', '>=') }}"
+          
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
@@ -183,17 +203,9 @@
 
         FOR MORE DOCUMENTATION SEE: https://github.com/vicoslab/ccc-deployment/blob/master/USER_INSTRUCTION.md{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}
         
-        
-    device_requests:
-      - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
-        # CAUTION: provide options={}, device_ids=[] and count=0 as default to ENABLE proper detection of changes in container
-        driver: 'nvidia'
-        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else []}}"
-        count: "{{ 0 if compute_devices is defined else -1}}"
-        capabilities: 
-          - ['gpu']
-        options: "{{ dict() }}"
-    
+    # set device requests if docker server supports it
+    device_requests: "{{ DEVICE_REQUESTS | default(omit)  }}"
+
     restart_policy: unless-stopped
     volumes: "{{ CONTAINER_VOLUME_MOUNTS }}"
     keep_volumes: no
