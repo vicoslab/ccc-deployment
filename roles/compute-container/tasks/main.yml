@@ -125,8 +125,8 @@
           - ['gpu']
         options: "{{ dict() }}"
   # make sure to skip device_requests if Docker API does not support it (i.e. Docker server version above 19.03 is OK)
-  when: "{{ docker_info.host_info['ServerVersion'] is version('19.03', '>=') }}"
-          
+  when: "docker_info.host_info['ServerVersion'] is version('19.03', '>=') and compute_devices is defined and compute_devices is not none"
+    
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
@@ -202,7 +202,8 @@
         
     # set device requests if docker server supports it
     device_requests: "{{ DEVICE_REQUESTS | default(omit)  }}"
-
+    runtime: "{{compute_container_runtime | default(omit)}}"
+    
     restart_policy: unless-stopped
     volumes: "{{ CONTAINER_VOLUME_MOUNTS }}"
     keep_volumes: no
