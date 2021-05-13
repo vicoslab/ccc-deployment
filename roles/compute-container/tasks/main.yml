@@ -35,9 +35,20 @@
       until: "'content' in custom_user_settings_file"
       delay: 2
 
-- name: Add user-defined custom config and check if container should be deployed
+- name: Get user-defined custom config if exists, or report error otherwiser
   block:
     - set_fact: custom_user_settings={{ custom_user_settings_file.content | b64decode | from_yaml  }}
+  rescue: # use 
+    - name: setting CONTAINER_REPORT_IMAGE_ERROR
+      set_fact: 
+        CONTAINER_REPORT_IMAGE_ERROR: |2
+          "{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}"
+        
+          CUSTOM CONTAINER SETTING ERROR: cannot parse {{ container.STACK_NAME }}.yml, reverted to DEFAULT settings !!
+      
+      
+- name: Add user-defined custom config and check if container should be deployed
+  block:
     # container_custom has user-supplied values but we still use container for variables that user should newer define (e.g., STACK_NAME, USER_TYPE, ...)
     - set_fact: container_custom={{ container | combine(custom_user_settings[container.STACK_NAME] | default({}), recursive=True) }}
     - set_fact: deployment_servers={{ container_custom.DEPLOYMENT_NODES | default(deployment_types[container.USER_TYPE].default_nodes) }}
@@ -106,8 +117,8 @@
     - name: setting CONTAINER_REPORT_IMAGE_ERROR
       set_fact: 
         CONTAINER_REPORT_IMAGE_ERROR: |2
-          
-          
+          {{ CONTAINER_REPORT_IMAGE_ERROR|default("") }} 
+                    
           IMAGE ERROR: CANNOT FIND '{{container_custom.CONTAINER_IMAGE}}', reverted to DEFAULT image !!
 
 - name: Get info on docker host
