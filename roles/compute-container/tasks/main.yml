@@ -112,6 +112,8 @@
     community.docker.docker_image:
       name: "{{ CONTAINER_IMAGE }}"
       source: pull
+      force_source: "{{ 'yes' if compute_container_image_pull_always|default(True) else 'no' }}"
+      
   rescue: # use original container and provide IMAGE error to user
     - set_fact: CONTAINER_IMAGE="{{ container.CONTAINER_IMAGE }}"
     - name: setting CONTAINER_REPORT_IMAGE_ERROR
@@ -220,5 +222,5 @@
     keep_volumes: no
     networks: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
     purge_networks: yes
-    pull: yes
+    pull: no
 
