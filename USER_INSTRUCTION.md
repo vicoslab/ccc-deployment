@@ -1,6 +1,5 @@
 # User instruction for using Conda Compute Containers
 
-
 ## Container image
 
 Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile) image that provides:
