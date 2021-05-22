@@ -1,8 +1,5 @@
 # User instruction for using Conda Compute Containers
 
-## Access to contianers
-
-Default access to the contianer is through **SSH with the private/public key**. The list of access points and ports is automatically sent to the user via email when container is created or updated. 
 
 ## Container image
 
@@ -12,6 +9,10 @@ Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc
  * Optional installation of apt packages during startup ([see below](#container-customization))
 
 Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/r/vicoslab/ccc). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
+
+## Access to contianers
+
+Default access to the contianer is through **SSH with the private/public key**. The list of access points and ports is automatically sent to the user via email when container is created or updated. 
 
 ### Container data and mount-points
 
