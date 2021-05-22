@@ -1,5 +1,5 @@
 - name: install ansible-pull using needed for container nightwatcher
-  pip: name=ansible>={{ 2.10.5 if ansible_distribution_version is version('18.04', '>=') else 2.9}},docker>=4.3.0
+  pip: name=ansible>={{'2.10.5' if ansible_distribution_version is version('18.04', '>=') else '2.9'}},docker>=4.3.0
 
 - name: ensure /etc/ansible/ exists
   file: path=/etc/ansible state=directory
