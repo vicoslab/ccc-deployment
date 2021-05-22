@@ -3,14 +3,29 @@
   become: yes
   become_user: root
   tasks: 
-    - name: Deploy container for each entry in user-containers.yml config file   
+    - set_fact: process_index={{process_index|default(0)}}
+    - set_fact: process_total={{process_total|default(1)}}    
+    
+    - name: Select containers for deployment
       vars: 
         container: "{{ deployment_users[container_iter.USER_EMAIL] | default({}) | combine(container_iter) }}"
-      include_role: name=compute-container
+      set_fact: 
+        selected_deployment_containers: "{{ selected_deployment_containers|default([]) + [ container ] }}"
       with_items: "{{ deployment_containers }}"
-      loop_control: {loop_var: container_iter}
+      loop_control: 
+        loop_var: container_iter
       when:
          (containers is not defined and users is not defined) or
          (containers is defined and container_iter.STACK_NAME in containers.split(",")) or
          (users is defined and deployment_users[container_iter.USER_EMAIL].USER_EMAIL in users.split(","))
+
+    - name: Deploy selcted containers based on processing index
+      vars: 
+        container: "{{ container_iter }}"
+      include_role: name=compute-container
+      with_items: "{{ selected_deployment_containers }}"
+      loop_control: 
+        loop_var: container_iter
+        index_var: iter
+      when: "{{ iter|int % process_total|int == process_index|int }}"
       

@@ -3,6 +3,8 @@
 CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
 
+NUM_PARALLE_ANSIBLES=2
+
 watched_folder="{{ watched_folders }}"
 ansible_pull_cache="/home/{{ ansible_user }}/.ansible/pull/"
 checkout_folder="$ansible_pull_cache/{{ inventory_hostname }}-global-change"
@@ -11,11 +13,18 @@ checkout_branch="{{ ansible_pull_branch }}"
 inventory_dir="$checkout_folder/{{ ansible_pull_inventory_dir }}"
 playbook="{{ ansible_pull_playbook }}"
 
+log_folder="/var/log/container-nightwatch/"
+
 # clear cache before starting
 if [ -d "$ansible_pull_cache" ]; then
     rm -rf "$ansible_pull_cache/*"
     echo "Cleared git cache folder $ansible_pull_cache before starting."
 fi
+
+if [ -d "$log_folder" ]; then
+    mkdir $log_folder
+fi
+echo "Logging ansible-pull to $log_folder ..."
 
 cd $watched_folder
 
@@ -50,10 +59,15 @@ do
         if [ $do_check -eq 1 ]
         then
             echo "##################################################################################################"
-            echo "Calling ansible due to change in git repository" && updated=1
+            echo "Calling ansible due to change in git repository with $NUM_PARALLE_ANSIBLES processes" && updated=1
             echo ""
             echo ""
-            python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs
+            for i in {0..$(NUM_PARALLE_ANSIBLES-1)}
+            do
+                python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs -e process_index=$i -e process_total=$NUM_PARALLE_ANSIBLES 2>&1 | tee -a $log_folder/git-triggered-$i.log | grep "{{ inventory_hostname }} " &
+            done            
+            
+            wait
             
         fi
         # then do updates on per-container basis
@@ -78,7 +92,7 @@ do
                         echo ""
                         echo ""
                         
-                        python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id
+                        python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id 2>&1 | tee -a $log_folder/user-triggered.log | grep "{{ inventory_hostname }} "
                         
                 fi
                 
