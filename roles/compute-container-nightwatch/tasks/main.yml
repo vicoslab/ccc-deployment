@@ -31,10 +31,19 @@
   when: compute_container_nightwatch|bool
   register: nightwatcher_service_install
   
-- name: start container-nightwatch.service
-  systemd:     
-    daemon_reload: "{{ 'yes' if nightwatcher_install.changed or nightwatcher_service_install.changed else 'no' }}"
-    name: container-nightwatch.service
-    enabled: yes
-    state: "{{ 'restarted' if nightwatcher_install.changed or nightwatcher_service_install.changed else 'started' }}"
+- set_fact: daemon_reload={{nightwatcher_install.changed|default(False) or nightwatcher_service_install.changed|default(False)}}
+- set_fact: daemon_enable={{compute_container_nightwatch|bool}}
+- set_fact: daemon_state=stopped
+- set_fact: daemon_state="{{ 'restarted' if nightwatcher_install.changed or nightwatcher_service_install.changed else 'started' }}"
   when: compute_container_nightwatch|bool
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+  
+- name: start/stop container-nightwatch.service
+  systemd:     
+    daemon_reload: "{{ 'yes' if daemon_reload else 'no' }}"
+    name: container-nightwatch.service
+    enabled: "{{ 'yes' if daemon_enable else 'no' }}"
+    state: "{{ daemon_state }}"
+  when: compute_container_nightwatch|bool or 'container-nightwatch.service' in ansible_facts.services
