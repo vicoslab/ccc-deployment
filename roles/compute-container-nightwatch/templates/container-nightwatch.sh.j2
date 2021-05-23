@@ -3,7 +3,7 @@
 CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
 
-NUM_PARALLE_ANSIBLES=2
+NUM_PARALLEL_ANSIBLES=2
 
 watched_folder="{{ watched_folders }}"
 ansible_pull_cache="/home/{{ ansible_user }}/.ansible/pull/"
@@ -58,12 +58,12 @@ do
         if [ $do_check -eq 1 ]
         then
             echo "##################################################################################################"
-            echo "Calling ansible due to change in git repository with $NUM_PARALLE_ANSIBLES processes" && updated=1
+            echo "Calling ansible due to change in git repository with $NUM_PARALLEL_ANSIBLES processes" && updated=1
             echo ""
             echo ""
-            for i in $(seq 0 $((NUM_PARALLE_ANSIBLES-1)))
+            for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
             do
-                python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs -e process_index=$i -e process_total=$NUM_PARALLE_ANSIBLES 2>&1 | tee -a $log_folder/git-triggered-$i.log | grep "{{ inventory_hostname }} " &
+                python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs -e process_index=$i -e process_total=$NUM_PARALLEL_ANSIBLES 2>&1 | tee -a $log_folder/git-triggered-$i.log | grep "{{ inventory_hostname }} " &
             done            
             
             wait
