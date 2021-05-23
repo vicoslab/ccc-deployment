@@ -21,9 +21,8 @@ if [ -d "$ansible_pull_cache" ]; then
     echo "Cleared git cache folder $ansible_pull_cache before starting."
 fi
 
-if [ -d "$log_folder" ]; then
-    mkdir $log_folder
-fi
+sudo mkdir -p $log_folder
+sudo chown {{ansible_user}}:{{ansible_user}} $log_folder
 echo "Logging ansible-pull to $log_folder ..."
 
 cd $watched_folder
