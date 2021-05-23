@@ -110,15 +110,16 @@ do
             # additionally output final summary to stdout  
             for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
             do
-                python3 $(which ansible-pull) $playbook \
-                                              -U $checkout_url \
-                                              -C $checkout_branch \                                              
-                                              -d $checkout_folder -u {{ ansible_user }} \
+                python3 $(which ansible-pull) -U $checkout_url \
+                                              -C $checkout_branch \
+                                              -d $checkout_folder \
+                                              -u {{ ansible_user }} \
                                               -i $inventory_dir \
                                               -e machines={{ inventory_hostname }} \
                                               -e process_index=$i \
                                               -e process_total=$NUM_PARALLEL_ANSIBLES \
-                                              --track-subs 2>&1 \
+                                              --track-subs \
+                                              $playbook 2>&1 \
                                               | tee -a $log_folder/git-triggered-$timestamp-thread-$i.log \
                                               | grep "{{ inventory_hostname }} " &
                                               
@@ -166,13 +167,13 @@ do
                         # get timestamp in human readable form for logging
                         timestamp=$(date '+%d.%m.%Y-%H:%M:%S')
                                                 
-                        python3 $(which ansible-pull) $playbook \
-                                                      -U $checkout_url \
-                                                      -C $checkout_branch 
+                        python3 $(which ansible-pull) -U $checkout_url \
+                                                      -C $checkout_branch \
                                                       -u {{ ansible_user }} \
                                                       -i $inventory_dir \
                                                       -e machines={{ inventory_hostname }} \
-                                                      -e users=$user_id 2>&1 \
+                                                      -e users=$user_id \
+                                                      $playbook 2>&1 \
                                                       | tee -a $log_folder/user-triggered-$timestamp.log \
                                                       | grep "{{ inventory_hostname }} "
                         
