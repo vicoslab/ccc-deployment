@@ -23,8 +23,8 @@
 #
 # All ansible-pull results are logged into specificed log folder ($log_folder). For git 
 # repo changes this is stored as 'git-triggered-$timestamp-thread-$i.log' while for 
-# file changes they are sotred as 'user-triggered-$timestamp.log'. Logs are retained maxed
-# specified $LOG_MAX_DAYS days.
+# file changes they are sotred as 'user-triggered-$user_id-$timestamp.log'. Logs are retained 
+# maxed specified $LOG_MAX_DAYS days.
 # 
 # 
 
@@ -174,7 +174,7 @@ do
                                                       -e machines={{ inventory_hostname }} \
                                                       -e users=$user_id \
                                                       $playbook 2>&1 \
-                                                      | tee -a $log_folder/user-triggered-$timestamp.log \
+                                                      | tee -a $log_folder/user-triggered-$user_id-$timestamp.log \
                                                       | grep "{{ inventory_hostname }} "
                         
                         clearlog_check # clear older logs if needed
