@@ -64,6 +64,7 @@ do
             for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
             do
                 python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs -e process_index=$i -e process_total=$NUM_PARALLEL_ANSIBLES 2>&1 | tee -a $log_folder/git-triggered-$i.log | grep "{{ inventory_hostname }} " &
+                sleep 2
             done            
             
             wait
