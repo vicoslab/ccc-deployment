@@ -1,10 +1,41 @@
 #!/bin/bash
+#
+# CONTAINER NIGHTWATCH SCRIPT
+#
+# This script will perform ansible pull based when two monitored items:
+#  - changes in the git repository ($checkout_url, $checkout_branch)
+#  - changes in the watched files based on timestamps (files matching 
+#    $watched_file_pattern pattern in $watched_folder folder)
+# 
+# Changes are registered with max 5 sec delay for watched files and $GIT_CHECK_TIMEOUT 
+# sec delay for git repository check.
+# 
+# Upon observed changes ansible-pull is activated with the specified playbook ($playbook) 
+# on specificed checkout git repository ($checkout_url, $checkout_branch). Ansible playbook
+# is run only for local machine using added variable '-e machines={{ inventory_hostname }}'.
+#
+# Ansible-pull on git changes can be run in parallel ($NUM_PARALLEL_ANSIBLES) where playbook
+# is updated with additional variables '-e process_index=$i -e process_total=$NUM_PARALLEL_ANSIBLES'.
+# Playbook scripts must be aware of parallel processes to reduce its workload.
+#
+# When changes are detected for specific watched file, ansible playbook is run with variable 
+# '-e user=$user_id', where $user_id is obtained as first subfolder in $watched_folder.
+#
+# All ansible-pull results are logged into specificed log folder ($log_folder). For git 
+# repo changes this is stored as 'git-triggered-$timestamp-thread-$i.log' while for 
+# file changes they are sotred as 'user-triggered-$timestamp.log'. Logs are retained maxed
+# specified $LOG_MAX_DAYS days.
+# 
+# 
 
 CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
-NUM_PARALLEL_ANSIBLES=5
+
+NUM_PARALLEL_ANSIBLES="{{ ansible_pull_num_parallel | default(1) }}"
 
 watched_folder="{{ watched_folders }}"
+watched_file_pattern="{{ watched_folders_pattern }}"
+watched_folders_max_depth="{{ watched_folders_max_depth }}"
 ansible_pull_cache="/home/{{ ansible_user }}/.ansible/pull/"
 checkout_folder="$ansible_pull_cache/{{ inventory_hostname }}-global-change"
 checkout_url="{{ ansible_pull_url }}"
@@ -12,7 +43,13 @@ checkout_branch="{{ ansible_pull_branch }}"
 inventory_dir="$checkout_folder/{{ ansible_pull_inventory_dir }}"
 playbook="{{ ansible_pull_playbook }}"
 
-log_folder="/var/log/container-nightwatch/"
+LOG_MAX_DAYS="{{ log_max_days }}"
+log_folder="{{ log_dir }}"
+
+function clearlog_check()
+{
+    find $log_folder -mtime +$LOG_MAX_DAYS -type f -delete
+}
 
 # clear cache before starting
 if [ -d "$ansible_pull_cache" ]; then
@@ -20,38 +57,44 @@ if [ -d "$ansible_pull_cache" ]; then
     echo "Cleared git cache folder $ansible_pull_cache before starting."
 fi
 
+# create log folder
 sudo mkdir -p $log_folder
 sudo chown {{ansible_user}}:{{ansible_user}} $log_folder
 echo "Logging ansible-pull to $log_folder ..."
 
+# move to watched folder
 cd $watched_folder
 
 declare -A last_runs
 
 last_git_check=$(date +%s)
 
-echo "Waiting for changes in $watched_folder/{{ watched_folders_pattern }} .."
+echo "Waiting for changes in $watched_folder/$watched_file_pattern .."
 while :
 do
         updated=0
         
-        # do update on all containers if git repository changed                
+        # do ansible-pull on first run (if checkout folder does not exist)  
         do_check=0
         if [ ! -d $checkout_folder ] ; then do_check=1; fi
 
+        # when not first run then do check for git changes in the checkout folder 
+        # when $GIT_CHECK_TIMEOUT sec has passes since last check
         if [ $do_check -eq 0 ] && [ $(date +%s) -ge $((last_git_check + $GIT_CHECK_TIMEOUT)) ] 
         then
+            # mark date for current git check
             last_git_check=$(date +%s)
             
+            # move to git folder and user git remove update + git status to detect any changes to the git
             cd $checkout_folder 
             git remote update > /dev/null 2>&1 
             git status -uno | grep -q 'Your branch is behind' && do_check=1
             
-            # pull changes for submodules as well - submodule updated is needed in some older versions of git (e.g., 2.7)
+            # perform pull to prepare checkout repo for ansible pull            
             git pull --recurse-submodules=yes > /dev/null 2>&1 
+            # do submodule update as well - is needed for some older versions of git (e.g., 2.7)
             git submodule update --recursive > /dev/null 2>&1 
-            cd $watched_folder
-
+            
         fi
 
         if [ $do_check -eq 1 ]
@@ -60,20 +103,49 @@ do
             echo "Calling ansible due to change in git repository with $NUM_PARALLEL_ANSIBLES processes" && updated=1
             echo ""
             echo ""
+            # get timestamp for logging
+            timestamp=$(date '+%d.%m.%Y-%H:%M:%S')
+            
+            # perform ansible pull in parallel and log to provided folder
+            # additionally output final summary to stdout  
             for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
             do
-                python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -d $checkout_folder -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} --track-subs -e process_index=$i -e process_total=$NUM_PARALLEL_ANSIBLES 2>&1 | tee -a $log_folder/git-triggered-$i.log | grep "{{ inventory_hostname }} " &
+                python3 $(which ansible-pull) $playbook \
+                                              -U $checkout_url \
+                                              -C $checkout_branch \                                              
+                                              -d $checkout_folder -u {{ ansible_user }} \
+                                              -i $inventory_dir \
+                                              -e machines={{ inventory_hostname }} \
+                                              -e process_index=$i \
+                                              -e process_total=$NUM_PARALLEL_ANSIBLES \
+                                              --track-subs 2>&1 \
+                                              | tee -a $log_folder/git-triggered-$timestamp-thread-$i.log \
+                                              | grep "{{ inventory_hostname }} " &
+                                              
+                # ensure a few sec of delay between parallel runs to prevent issues with git pull on same checkout folder
                 sleep 2
-            done            
+            done
             
+            # wait for all ansible-pull threads to finish
             wait
             
+            # clear older logs if needed
+            clearlog_check 
+            
         fi
-        # then do updates on per-container basis
-        for watched_file in $(find . -maxdepth {{ watched_folders_max_depth }}  -wholename '{{ watched_folders_pattern }}') ;
+        
+        # move to watched folder
+        cd $watched_folder
+
+        # then do updates on per-container basis by 
+        # perform check for every file in $watched_folder individually
+        for watched_file in $(find . -maxdepth $watched_folders_max_depth  -wholename "$watched_file_pattern") ;
         do
+                # split name into "<root-folder>/<user-id-folder>/<container-id-folder>
                 IFS=/ read var1 user_id container_id <<< "$watched_file"
+                
                 # get last run datetime (or assign current time if not found before)
+                # and store it for every "subfolder" in $watched_folder (i.e. this folder represents user-id)
                 if [ ${last_runs[$user_id]+_} ]; then                 
                     last_run=${last_runs[$user_id]}
                 else
@@ -83,19 +155,34 @@ do
                 # get date of file modification
                 last_modified=$(date +%s -r $watched_file)
                 
-                # activate update if file modified after last run
+                # activate ansible-pull if file modified after last run (with at leat 5 sec elapses time)
                 if [ $last_modified -ge $((last_run + 5)) ] ; then
+                        # mark timestamp for this check
                         last_run=$(date +%s)
                         echo "##################################################################################################"
                         echo "Calling ansible due to change in $watched_file" && updated=1
                         echo ""
                         echo ""
+                        # get timestamp in human readable form for logging
+                        timestamp=$(date '+%d.%m.%Y-%H:%M:%S')
+                                                
+                        python3 $(which ansible-pull) $playbook \
+                                                      -U $checkout_url \
+                                                      -C $checkout_branch 
+                                                      -u {{ ansible_user }} \
+                                                      -i $inventory_dir \
+                                                      -e machines={{ inventory_hostname }} \
+                                                      -e users=$user_id 2>&1 \
+                                                      | tee -a $log_folder/user-triggered-$timestamp.log \
+                                                      | grep "{{ inventory_hostname }} "
                         
-                        python3 $(which ansible-pull) -U $checkout_url -C $checkout_branch $playbook -u {{ ansible_user }} -i $inventory_dir -e machines={{ inventory_hostname }} -e users=$user_id 2>&1 | tee -a $log_folder/user-triggered.log | grep "{{ inventory_hostname }} "
-                        
+                        clearlog_check # clear older logs if needed
+                    
                 fi
                 
+                # save timestamp for subfolder 
                 last_runs[$user_id]=$last_run
+                
         done
         
         if [ $updated -eq 1 ]
@@ -103,7 +190,7 @@ do
             echo "##################################################################################################"
             echo "##################################################################################################"
             echo ""
-            echo "Waiting for changes in $watched_folder/{{ watched_folders_pattern }} .."
+            echo "Waiting for changes in $watched_folder/$watched_file_pattern .."
             echo ""
             echo ""
         fi

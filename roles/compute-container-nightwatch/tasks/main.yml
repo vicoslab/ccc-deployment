@@ -21,6 +21,10 @@
     ansible_pull_branch: "{{ compute_container_nightwatch_git_branch }}"
     ansible_pull_inventory_dir: "{{ compute_container_nightwatch_git_intentory_dir }}"
     ansible_pull_playbook: "{{ compute_container_nightwatch_git_playbook_dir }}/containers-deploy.yml"
+    ansible_pull_num_parallel: "{{ compute_container_nightwatch_num_parallel_pull }}"
+    log_dir: "{{ compute_container_nightwatch_log_dir }}"
+    log_max_days: "{{ compute_container_nightwatch_log_max_days }}"
+    
   when: compute_container_nightwatch|bool
   register: nightwatcher_install
 

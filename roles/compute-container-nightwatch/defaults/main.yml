@@ -3,6 +3,9 @@ compute_container_nightwatch_git_url: ""
 compute_container_nightwatch_git_branch: master
 compute_container_nightwatch_git_intentory_dir: inventory
 compute_container_nightwatch_git_playbook_dir: playbook
+compute_container_nightwatch_num_parallel_pull: 1
+compute_container_nightwatch_log_dir: /var/log/container-nightwatch
+compute_container_nightwatch_log_max_days: 100
 
 compute_container_nightwatch_secure:
   git_token: ""
