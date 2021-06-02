@@ -2,7 +2,7 @@
 # Conda Compute Cluster user customisable settings:
 #
 #  CONTAINER_IMAGE: docker container that is compatible with Conda Compute Container
-#  INSTALL_PACKAGES: comma seperated list of apt-get packages
+#  INSTALL_PACKAGES: space seperated list of apt-get packages
 #  INSTALL_REPOSITORY_KEYS: comma seperated list of repositry keys
 #  INSTALL_REPOSITORY_SOURCES: comma seperated list of repositry sources
 #  SHM_SIZE: docker shared memory size
@@ -12,8 +12,8 @@
 
 # Uncomment lines below to change settings (cluster automaically updates containers in around one minute)
 # 
-#{{container.STACK_NAME}}:
-#  CONTAINER_IMAGE: "{{ container.CONTAINER_IMAGE }}"
+{{container.STACK_NAME}}:
+  CONTAINER_IMAGE: "{{ container.CONTAINER_IMAGE }}"
 #  DEPLOYMENT_NODES: {{ container.DEPLOYMENT_NODES | default("[]") }}
 #  INSTALL_PACKAGES: "{{ container.INSTALL_PACKAGES  | default() }}"
 #  INSTALL_REPOSITORY_KEYS: "{{ container.INSTALL_REPOSITORY_KEYS | default() }}"
