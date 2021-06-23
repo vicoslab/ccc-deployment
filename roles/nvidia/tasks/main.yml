@@ -8,8 +8,9 @@
   
   - name: Update apt and install nvidia-driver
     apt: 
-      update_cache: yes 
-      name: ["nvidia-driver-{{nvidia_driver_version}}",  "nvidia-headless-{{nvidia_driver_version}}", "nvidia-utils-{{nvidia_driver_version}}"] 
+      update_cache: yes
+      install_recommends: no
+      name: ["nvidia-headless-{{nvidia_driver_version}}", "nvidia-utils-{{nvidia_driver_version}}"] 
       state: present
     register: aptkey
     
