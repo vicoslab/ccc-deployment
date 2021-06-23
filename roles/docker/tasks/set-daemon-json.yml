@@ -1,0 +1,29 @@
+- name: Check that the /etc/docker/daemon.json exists
+  stat:
+    path: /etc/docker/daemon.json
+  register: stat_result
+
+- block:
+  - name: load var from file
+    slurp:
+      src: /etc/docker/daemon.json
+    register: docker_daemon_vars_reg
+
+  - name: append more key/values
+    set_fact:
+      docker_daemon_vars_store: "{{ docker_daemon_vars_reg.content|b64decode|from_json }}"
+  
+  when: stat_result.stat.exists == true
+
+- name: append more key/values
+  set_fact:
+    docker_daemon_vars_store: "{{ docker_daemon_vars_store | default({}) | combine(docker_daemon_vars | default({}), recursive=True) }}"
+  with_items: "{{ docker_daemon_vars }}"
+
+- debug:
+    msg: "{{ docker_daemon_vars_store | to_nice_json }}"
+- name: write var to file
+  copy:
+    content: "{{ docker_daemon_vars_store | to_nice_json }}"
+    dest: /etc/docker/daemon.json
+  

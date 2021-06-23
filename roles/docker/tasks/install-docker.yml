@@ -20,6 +20,9 @@
     name: "docker-ce={{ docker_version }}"
     state: present
 
+- name: Set nvidia as default docker runtime
+  import_tasks: set-daemon-json.yml
+    
 - name: Install Docker Module for Python
   pip:
     name: docker>=4.3.0

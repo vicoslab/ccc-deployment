@@ -6,5 +6,5 @@
         }
     },    
     "default-runtime": "nvidia",
-    "live-restore": true
+    "live-restore": true,
 }
