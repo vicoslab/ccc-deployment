@@ -23,7 +23,12 @@
     - { src: "cachefilesd.conf.j2", dest: "/etc/cachefilesd.conf", owner: "root", group: "root", mode: "0644" }
   loop_control: {loop_var: files_iter}
   notify: cachefilesd | restart service
-
+ 
+- name: cachefilesd | create cache folder if does not exists
+  file:
+    path: "{{cachefilesd_cache_folder}}"
+    state: directory
+  
 - name: cachefilesd | enable service
   service:
     name: "cachefilesd"
