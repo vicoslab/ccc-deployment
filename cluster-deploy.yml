@@ -5,9 +5,9 @@
   vars:
     default_roles:
       - netplan
+      - zfs
       - docker
       - frp-client
-      - zfs
       - cachefilesd
       - nfs-storage
       - superfan-gpu
