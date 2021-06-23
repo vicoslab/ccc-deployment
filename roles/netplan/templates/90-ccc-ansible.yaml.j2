@@ -36,3 +36,34 @@ network:
         set-name: {{ inet.interface }}
 {% endfor %}
     version: 2
+{% if netplan_interfaces_vlan|length > 0 %}
+    vlans:
+{% for inet in netplan_interfaces_vlan %}
+      {{ inet.interface }}:
+{% if 'addresses' in inet %}
+        addresses:
+{% for addr in inet.addresses %}
+        - {{ addr }}
+{% endfor %}
+        id: "{{ inet.id }}"
+        link: "{{ inet.link }}"
+{% if 'nameservers' in inet %}
+        nameservers:
+          addresses: [ {% for ns in inet.nameservers %}"{{ ns }}"{{ ", " if not loop.last else " " }}{% endfor %} ]
+{% endif %}
+        dhcp4: no
+{% else %}
+        dhcp4: yes
+{% endif %}        
+{% if 'routes' in inet %}
+        routes:
+{% for route in inet.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          metric: {{ route.metric|default(100) }}
+{% endfor %}
+        
+{% endif %}
+        mtu: 1500
+{% endfor %}
+{% endif %}

@@ -1,6 +1,7 @@
 - name: netplan | deploying ccc netplan interfaces
   vars: 
     netplan_interfaces: "{{ netplan_iface }}"
+    netplan_interfaces_vlan: "{{ netplan_iface_vlans | default([]) }}"
   template:
     src: 90-ccc-ansible.yaml.j2
     dest: /etc/netplan/90-ccc-ansible.yaml
