@@ -112,8 +112,8 @@
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/var/run/docker.sock:/var/run/docker.sock'] }}"
     - set_fact: 
         INSTALL_DOCKER_ACCESS_VARS:
-          INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0}}"
-          INSTALL_REPOSITORY_SOURCES: "https://download.docker.com/linux/ubuntu stable{{(',' +container_custom.INSTALL_REPOSITORY_SOURCES) if container_custom.INSTALL_REPOSITORY_SOURCES|default('')|length > 0}}"
+          INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0 else ''}}"
+          INSTALL_REPOSITORY_SOURCES: "https://download.docker.com/linux/ubuntu stable{{(',' +container_custom.INSTALL_REPOSITORY_SOURCES) if container_custom.INSTALL_REPOSITORY_SOURCES|default('')|length > 0 else ''}}"
           INSTALL_PACKAGES: "docker-ce-cli {{container_custom.INSTALL_PACKAGES|default('')}}"
     - set_fact: container_custom="{{ container_custom | combine(INSTALL_DOCKER_ACCESS_VARS)}}"
   when: "'ENABLE_DOCKER_ACCESS' in container and container.ENABLE_DOCKER_ACCESS|bool"
