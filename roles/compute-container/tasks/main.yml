@@ -105,17 +105,20 @@
 
 - name: Enable docker access via docker.sock if allowed
   block:
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/var/run/docker.sock:/var/run/docker.sock'] }}"
     - command: 'sed -nr "s/^docker:x:([0-9]+):.*/\1/p" /etc/group'
       register: DOCKER_GROUP_ID
+      changed_when: False
     - set_fact: 
-        USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default(999)}}"
-    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/var/run/docker.sock:/var/run/docker.sock'] }}"
+        UPDATED_CONTAINER_VARS:
+          USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default(999)}}"
+    - set_fact: container="{{ container | combine(UPDATED_CONTAINER_VARS)}}"
     - set_fact: 
-        INSTALL_DOCKER_ACCESS_VARS:
+        UPDATED_CUSTOM_CONTAINER_VARS:
           INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0 else ''}}"
           INSTALL_REPOSITORY_SOURCES: "https://download.docker.com/linux/ubuntu stable{{(',' +container_custom.INSTALL_REPOSITORY_SOURCES) if container_custom.INSTALL_REPOSITORY_SOURCES|default('')|length > 0 else ''}}"
           INSTALL_PACKAGES: "docker-ce-cli {{container_custom.INSTALL_PACKAGES|default('')}}"
-    - set_fact: container_custom="{{ container_custom | combine(INSTALL_DOCKER_ACCESS_VARS)}}"
+    - set_fact: container_custom="{{ container_custom | combine(UPDATED_CUSTOM_CONTAINER_VARS)}}"
   when: "'ENABLE_DOCKER_ACCESS' in container and container.ENABLE_DOCKER_ACCESS|bool"
       
 - name: Ensure that used container does exists
@@ -205,7 +208,7 @@
       USER_NAME: "{{ container_custom.USER_NAME }}"
       USER_ID: '{{ nfs_user_id | string }}'
       USER_PUBKEY: "{{ USER_PUBKEY_STR }}"
-      USER_GROUPS: "{{USER_GROUPS|default(omit)}}"
+      USER_GROUPS: "{{ container.USER_GROUPS|default(omit) }}"
       INSTALL_PACKAGES: "{{ container_custom.INSTALL_PACKAGES | default('') }}"
       INSTALL_REPOSITORY_KEYS: "{{ container_custom.INSTALL_REPOSITORY_KEYS | default('') }}"
       INSTALL_REPOSITORY_SOURCES: "{{ container_custom.INSTALL_REPOSITORY_SOURCES | default('') }}"
