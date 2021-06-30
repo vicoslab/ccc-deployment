@@ -51,6 +51,7 @@
   block:
     # container_custom has user-supplied values but we still use container for variables that user should newer define (e.g., STACK_NAME, USER_TYPE, ...)
     - set_fact: container_custom={{ container | combine(custom_user_settings[container.STACK_NAME] | default({}), recursive=True) }}
+    - set_fact: container_extra={{ {} }}
     - set_fact: deployment_servers={{ container_custom.DEPLOYMENT_NODES | default(deployment_types[container.USER_TYPE].default_nodes) }}
     - set_fact: allowed_servers={{ container.ALLOWED_NODES | default([]) | union(deployment_types[container.USER_TYPE].allowed_nodes) }}
     - set_fact: container_state=absent
@@ -111,8 +112,9 @@
       changed_when: False
     - set_fact: 
         UPDATED_CONTAINER_VARS:
-          USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default(999)}}"
-    - set_fact: container="{{ container | combine(UPDATED_CONTAINER_VARS)}}"
+          USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default('999')}}"
+    - set_fact: container_extra="{{ container_extra | combine(UPDATED_CONTAINER_VARS) }}"
+    - debug: msg={{container_extra}}
     - set_fact: 
         UPDATED_CUSTOM_CONTAINER_VARS:
           INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0 else ''}}"
@@ -208,7 +210,7 @@
       USER_NAME: "{{ container_custom.USER_NAME }}"
       USER_ID: '{{ nfs_user_id | string }}'
       USER_PUBKEY: "{{ USER_PUBKEY_STR }}"
-      USER_GROUPS: "{{ container.USER_GROUPS|default(omit) }}"
+      USER_GROUPS: "{{ container_extra.USER_GROUPS|default(omit) }}"
       INSTALL_PACKAGES: "{{ container_custom.INSTALL_PACKAGES | default('') }}"
       INSTALL_REPOSITORY_KEYS: "{{ container_custom.INSTALL_REPOSITORY_KEYS | default('') }}"
       INSTALL_REPOSITORY_SOURCES: "{{ container_custom.INSTALL_REPOSITORY_SOURCES | default('') }}"
