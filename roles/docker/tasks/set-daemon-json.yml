@@ -20,8 +20,6 @@
     docker_daemon_vars_store: "{{ docker_daemon_vars_store | default({}) | combine(docker_daemon_vars | default({}), recursive=True) }}"
   with_items: "{{ docker_daemon_vars }}"
 
-- debug:
-    msg: "{{ docker_daemon_vars_store | to_nice_json }}"
 - name: write var to file
   copy:
     content: "{{ docker_daemon_vars_store | to_nice_json }}"
