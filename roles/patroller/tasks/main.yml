@@ -5,14 +5,23 @@
     env:
       PATROLLER_USER_LABELS: "ccc-user.email"
       PATROLLER_LEASE: "{{patroller_lease|string}}"
+    labels:
+      frp.enabled: "true"
+      frp.80: "http"
+      frp.80.health_check: "false"
+      frp.80.http.subdomain: "{{ inventory_hostname }}-monitor"
+      frp.80.http.username: "{{ patroller_secure.user }}"
+      frp.80.http.password: "{{ patroller_secure.pass }}"
+    exposed_ports: 80
+
     networks:
       - name: "{{patroller_network}}"
         aliases: ["claims", "reservation"]
       - name: "bridge"
+      - name: "{{patroller_proxy_network}}"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-    ports:
-     - "{{patroller_publish_ip}}:9011:80"
+      - "/var/run/docker.sock:/var/run/docker.sock"      
+
     pid_mode: host
     privileged: True
     purge_networks: yes
