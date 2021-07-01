@@ -10,7 +10,7 @@
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/volumes:/var/lib/docker/volumes
     ports: 
-      - "{{docker_portainer_publish_ip}}:9001:9001/tcp"
+      - "{{docker_portainer_publish_ip|default('0.0.0.0')}}:{{docker_portainer_publish_port|default(9001)}}:9001/tcp"
     restart_policy: unless-stopped
     pull: yes
   when: docker_portainer_agent|bool
