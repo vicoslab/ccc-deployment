@@ -22,3 +22,11 @@
 #  USER_NAME: "{{ container.USER_NAME }}"
 #  USER_PUBKEY: "{{ container.USER_PUBKEY | default() }}"
 #  USER_PUBKEY_FROM_GITHUB: "{{ container.USER_PUBKEY_FROM_GITHUB | default()  }}"
+{% if 'FRP_PORTS' in container %}
+#  FRP_PORTS:
+#    TCP: [{{container.FRP_PORTS.TCP|join(',')}},]
+#    HTTP:         
+{% for HTTP_PORT in container.FRP_PORTS.HTTP -%}
+#      - {{ HTTP_PORT | to_yaml(indent=0) }}
+{%- endfor %}
+{% endif %}

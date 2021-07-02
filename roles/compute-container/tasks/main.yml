@@ -60,7 +60,6 @@
         - inventory_hostname in deployment_servers
         - inventory_hostname in allowed_servers
             
-
 - name: Gather all public keys of one user
   block:
     - set_fact:
@@ -114,7 +113,6 @@
         UPDATED_CONTAINER_VARS:
           USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default('999')}}"
     - set_fact: container_extra="{{ container_extra | combine(UPDATED_CONTAINER_VARS) }}"
-    - debug: msg={{container_extra}}
     - set_fact: 
         UPDATED_CUSTOM_CONTAINER_VARS:
           INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0 else ''}}"
