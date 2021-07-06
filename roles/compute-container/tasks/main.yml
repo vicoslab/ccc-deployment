@@ -177,14 +177,14 @@
       {% endfor %}
       "frp.enabled": "true",
       "frp.notify_email": "{{ container.USER_EMAIL }}",
-      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}
-      "frp.{{ HTTP_PORT.port }}": "http",
+      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}      
+      "frp.{{ HTTP_PORT.port }}": "{{ 'https' if HTTP_PORT.https_without_pass|default(false)|bool else 'http'}}",
         {% if HTTP_PORT.subdomain_hostname_prefix|default(true)|bool %}
       "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ inventory_hostname }}-{{ HTTP_PORT.subdomain }}",
         {% else %}
       "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ HTTP_PORT.subdomain }}",
         {% endif %}
-        {% if 'pass' in HTTP_PORT.keys() %}
+        {% if 'pass' in HTTP_PORT.keys() and not HTTP_PORT.https_without_pass|default(false)|bool %}
       "frp.{{ HTTP_PORT.port }}.http.username": "{{ container_custom.USER_NAME }}",
       "frp.{{ HTTP_PORT.port }}.http.password": "{{ HTTP_PORT.pass }}",
         {% endif %}
