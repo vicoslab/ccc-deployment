@@ -19,8 +19,12 @@ network:
 {% endif %}
         dhcp4: no
 {% else %}
-        dhcp4: yes
-{% endif %}        
+        dhcp4: {{ "yes" if inet.dhcp4|default(False)|bool else "no" }}
+{% endif %}       
+        dhcp6: {{ "yes" if inet.dhcp6|default(False)|bool else "no" }}
+{% if 'accept_ra' in inet %}
+        accept-ra: {{ "yes" if inet.accept_ra|bool else "no" }}
+{% endif %}
 {% if 'routes' in inet %}
         routes:
 {% for route in inet.routes %}
@@ -53,8 +57,13 @@ network:
 {% endif %}
         dhcp4: no
 {% else %}
-        dhcp4: yes
+        dhcp4: {{ "yes" if inet.dhcp4|default(False)|bool else "no" }}
 {% endif %}        
+        dhcp6: {{ "yes" if inet.dhcp6|default(False)|bool else "no" }}
+{% if 'accept_ra' in inet %}
+        accept-ra: {{ "yes" if inet.accept_ra|bool else "no" }}
+{% endif %}
+
 {% if 'routes' in inet %}
         routes:
 {% for route in inet.routes %}
