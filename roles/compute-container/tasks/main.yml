@@ -155,7 +155,34 @@
         options: "{{ dict() }}"
   # make sure to skip device_requests if Docker API does not support it (i.e. Docker server version above 19.03 is OK)
   when: "docker_info.host_info['ServerVersion'] is version('19.03', '>=') and compute_devices is defined and compute_devices is not none"
-    
+
+- name: Prepare list of requested networks
+  set_fact: 
+    CONTAINER_NETWORK_LIST: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
+
+- name: Create internal overlay network for this container if swarm is enabled
+  community.docker.docker_network:
+    name: "overlay-{{ container.STACK_NAME }}"
+    driver: "overlay"
+    internal: yes
+    attachable : yes
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+    - docker_swarm_manager|bool
+
+- name: Add overlay to list of required networks if swarm is enabled
+  block:
+   - set_fact:
+       CONTAINER_NETWORK_OVERLAY:
+         name: "overlay-{{container.STACK_NAME}}"
+         aliases: "{{inventory_hostname}}"
+   - set_fact:
+       CONTAINER_NETWORK_LIST: "{{ CONTAINER_NETWORK_LIST + [CONTAINER_NETWORK_OVERLAY] }}" 
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+  
 # Deploy the stack on each worker node
 - name: Deploy container {{ container.STACK_NAME }}
   throttle: 1
@@ -237,7 +264,8 @@
     restart_policy: unless-stopped
     volumes: "{{ CONTAINER_VOLUME_MOUNTS }}"
     keep_volumes: no
-    networks: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
+    networks: "{{ CONTAINER_NETWORK_LIST }}"
+      
     purge_networks: yes
     pull: no
 

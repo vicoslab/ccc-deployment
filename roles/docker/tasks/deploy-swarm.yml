@@ -1,0 +1,22 @@
+
+- name: Initialize swarm clustr on primary manager
+  community.docker.docker_swarm:
+    state: present
+    advertise_addr: "{{docker_swarm_leader_addr | default(omit)}}"
+  register: result
+  when: "docker_swarm_leader == inventory_hostname"
+
+- name: Get join-token for manager nodes
+  set_fact:
+    join_token_manager: "{{ hostvars[docker_swarm_leader].result.swarm_facts.JoinTokens.Manager }}"
+
+- name: Get join-token for worker nodes
+  set_fact:
+    join_token_worker: "{{ hostvars[docker_swarm_leader].result.swarm_facts.JoinTokens.Worker }}"
+
+- name: Join swarm cluster 
+  community.docker.docker_swarm:
+    state: join
+    remote_addrs: "{{ docker_swarm_leader_addr }}"
+    join_token: "{{ join_token_manager if docker_swarm_manager else join_token_worker}}"
+  when: "docker_swarm_leader != inventory_hostname"

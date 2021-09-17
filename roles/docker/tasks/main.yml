@@ -8,6 +8,10 @@
 - name: Login to repositiroies
   import_tasks: login-repository.yml
 
+- name: Deploy docker swarm
+  import_tasks: deploy-swarm.yml
+  when: docker_swarm_enabled|bool
+
 - name: Deploy networks
   import_tasks: deploy-networks.yml
   
