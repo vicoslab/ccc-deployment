@@ -1,6 +1,7 @@
 - name: Deploy container for local Patroller node
   docker_container:
     name: "claims"
+    state: "{{ 'started' if patroller_enabled|default(False)|bool else 'absent' }}"
     image: "{{patroller_image_version}}"
     env:
       PATROLLER_USER_LABELS: "ccc-user.email"
