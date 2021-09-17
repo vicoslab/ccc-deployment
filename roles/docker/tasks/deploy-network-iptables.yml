@@ -1,0 +1,11 @@
+- name: Set IPTABLES rules
+  iptables:
+    state: "{{ iptable.state }}"
+    action: insert
+    chain: "{{ iptable.chain }}"
+    in_interface: "{{ iptable.in_interface }}"
+    source: "{{ iptable.source }}"
+    destination: "{{ iter if iter != 'anywhere' else omit }}"
+    jump: "{{ iptable.jump }}"
+  with_items: "{{ iptable.subnets }}"
+  loop_control: {loop_var: iter}

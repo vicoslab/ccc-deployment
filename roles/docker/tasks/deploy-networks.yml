@@ -1,7 +1,9 @@
 - name: Deploy docker network
   docker_network:
     name: "{{ net_iter.name }}"
+    state: "{{ 'absent' if net_iter.disabled|default(False)|bool else 'present' }}"
     driver: bridge
+    internal: "{{ net_iter.is_internal | default(False) | bool }}"
     ipam_config:
       - subnet: "{{ net_iter.subnet }}"
         gateway: "{{ net_iter.gateway }}"
@@ -10,30 +12,32 @@
   with_items: "{{ docker_networks }}"
   loop_control: {loop_var: net_iter}
   
-# Restrict any access outside of the container except for the GATEWAY to the internet
-- name: Allow GATEWAY packets    
-  iptables:
-    state: "{{ 'present' if net_iter.restriction_enabled else 'absent' }}"
-    action: insert
-    chain: DOCKER-USER
-    in_interface: "{{ net_iter.internal_name }}"
-    source: "{{ net_iter.subnet }}"
-    destination: "{{ net_iter.allowed_gateway }}"
-    jump: ACCEPT
-  with_items: "{{ docker_networks }}"  
-  when: "'restricted_subnet' in net_iter.keys() | list"
+# Set restriction on the network using IPTABLES
+- name: Set restricted IP packets
+  include_tasks: deploy-network-iptables.yml
+  vars: 
+    iptable: 
+      state: "{{ 'present' if net_iter.filter_enabled else 'absent' }}"
+      chain: DOCKER-USER
+      in_interface: "{{ net_iter.internal_name }}"
+      source: "{{ net_iter.subnet }}"
+      subnets: "{{ net_iter.restricted_access }}"
+      jump: DROP
+  with_items: "{{ docker_networks }}"
+  when: "'restricted_access' in net_iter.keys() | list"
   loop_control: {loop_var: net_iter}
   
-- name: Restrict SUBNET packets  
-  iptables:
-    state: "{{ 'present' if net_iter.restriction_enabled else 'absent' }}"
-    action: insert
-    chain: DOCKER-USER
-    in_interface: "{{ net_iter.internal_name }}"
-    source: "{{ net_iter.subnet }}"
-    destination: "{{ net_iter.restricted_subnet }}"
-    jump: DROP
+- name: Set allow IP packets
+  include_tasks: deploy-network-iptables.yml
+  vars: 
+    iptable: 
+      state: "{{ 'present' if net_iter.filter_enabled else 'absent' }}"
+      chain: DOCKER-USER
+      in_interface: "{{ net_iter.internal_name }}"
+      source: "{{ net_iter.subnet }}"
+      subnets: "{{ net_iter.allowed_access }}"
+      jump: ACCEPT
   with_items: "{{ docker_networks }}"
-  when: "'restricted_subnet' in net_iter.keys() | list"
+  when: "'allowed_access' in net_iter.keys() | list"
   loop_control: {loop_var: net_iter}
-    
+
