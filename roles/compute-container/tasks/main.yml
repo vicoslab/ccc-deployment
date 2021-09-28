@@ -189,7 +189,7 @@
       "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ HTTP_PORT.subdomain }}",
         {% endif %}
         {% if 'pass' in HTTP_PORT.keys() and not HTTP_PORT.https_without_pass|default(false)|bool %}
-      "frp.{{ HTTP_PORT.port }}.http.username": "{{ container_custom.USER_NAME }}",
+      "frp.{{ HTTP_PORT.port }}.http.username": "{{ HTTP_PORT.user|default(container_custom.USER_NAME) }}",
       "frp.{{ HTTP_PORT.port }}.http.password": "{{ HTTP_PORT.pass }}",
         {% endif %}
       "frp.{{ HTTP_PORT.port }}.health_check": "{{ HTTP_PORT.health_check if 'health_check' in HTTP_PORT.keys() else 'false' }}",
