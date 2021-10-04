@@ -8,6 +8,7 @@
       - zfs
       - docker
       - frp-client
+      - portainer
       - cachefilesd
       - nfs-storage
       - superfan-gpu
