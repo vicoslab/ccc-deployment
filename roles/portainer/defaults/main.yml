@@ -1,0 +1,5 @@
+docker_portainer_agent: False
+docker_portainer_publish_ip: 127.0.0.1
+
+docker_secure:
+ potrainer_agent_token: "LONG_RANDOM_GENERATED_TOKEN_ddDbh431g138"

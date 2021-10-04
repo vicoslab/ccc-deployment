@@ -1,0 +1,16 @@
+# manually connect container to overlay due to bus in ansible that prevent it from properly connecting using docker_container
+- name: Connect portainer-agent to the overlay network agent-network
+  ansible.builtin.command: docker network connect --alias="{{ inventory_hostname }}_agent" {{ portainer_network_overlay }} {{ CONTAINER_NAME }}
+  when: 
+    - portainer_network_overlay not in CONTAINER_EXISTING_NETWORK_LIST
+
+# Run docker_container to purge any previous networks
+- name: Container for portainer with overlay (swarm) network
+  community.docker.docker_container:
+    name: "{{ CONTAINER_NAME }}"
+    state: "started"
+    
+    networks: 
+      - name: "{{ portainer_network_overlay }}"
+        aliases: "{{ inventory_hostname }}_agent"
+    purge_networks: yes

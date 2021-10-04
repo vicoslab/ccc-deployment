@@ -15,5 +15,3 @@
 - name: Deploy networks
   import_tasks: deploy-networks.yml
   
-- name: Deploy portrainer agent for GUI management
-  import_tasks: deploy-portrainer-agent.yml

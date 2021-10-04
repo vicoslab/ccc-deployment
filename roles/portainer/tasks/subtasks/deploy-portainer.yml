@@ -1,0 +1,49 @@
+- name: Container for portainer web UI
+  docker_container:
+    name: "{{ portainer_ui_name }}"
+    image: "{{ portainer_ui_image | default('portainer/portainer-ce:latest') }}" 
+    #command: --tlsskipverify
+    state: "{{'present' if portainer_ui|bool else 'absent'}}"
+    labels:
+      frp.enabled: "true"
+      frp.9000: "http"
+      frp.9000.health_check: "true"
+      frp.9000.http.subdomain: "portainer"
+      #frp.9000.http.username: "{{ portainer_secure.ui_user }}"
+      #frp.9000.http.password: "{{ portainer_secure.ui_pass }}"
+    exposed_ports: [9443, 9000, 8000]
+    env:
+      AGENT_SECRET: "{{ AGENT_SECRET | default(omit) }}"
+    volumes:
+      - "{{ portainer_ui_storage_path }}:/data"
+    ports: "{{ [UI_EXPOSE_URL] if not docker_swarm_enabled else omit }}"
+    restart_policy: unless-stopped
+    networks: 
+      - name: "{{ portainer_ui_network }}"
+    
+    purge_networks: no
+    pull: yes
+  register: portainer_status
+
+# manually connect container to overlay due to bus in ansible that prevent it from properly connecting using docker_container
+- name: Connect portainer-agent to the overlay network agent-network
+  ansible.builtin.command: docker network connect --alias="{{ inventory_hostname }}_agent" {{ portainer_network_overlay }} {{ portainer_ui_name }}
+  when: 
+    - portainer_ui|bool
+    - docker_swarm_enabled|bool
+    - portainer_network_overlay not in portainer_status.container.NetworkSettings.Networks
+
+# Run docker_container to purge any previous networks
+- name: Container for portainer with overlay (swarm) network
+  community.docker.docker_container:
+    name: "{{ portainer_ui_name }}"
+    state: "started"
+    
+    networks: 
+      - name: "{{ portainer_ui_network }}"
+      - name: "{{ portainer_network_overlay }}"
+        aliases: "{{ inventory_hostname }}_agent"
+    purge_networks: yes
+  when: 
+    - portainer_ui|bool
+    - docker_swarm_enabled|bool

@@ -1,0 +1,33 @@
+- name: Ensuring atomic call to create docker_network {{ portainer_network_overlay }}
+  wait_for: path={{ portainer_network_lockfile }} state=absent
+  throttle: 1
+
+- name: Lock file for docker_network creation
+  file: path={{ portainer_network_lockfile | dirname }} state=directory
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true
+    
+- name: Lock file for docker_network creation
+  file: path={{ portainer_network_lockfile }} state=touch
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  changed_when: false
+  throttle: 1
+  
+# We need to attach overlay network manually using CLI (due to bugs in ansible using overlay networks for standalone contianers)
+- name: Create internal overlay network for portainer if swarm is enabled
+  community.docker.docker_network:
+    name: "{{ portainer_network_overlay }}"
+    driver: "overlay"
+    internal: yes
+    attachable : yes
+  throttle: 1 # Need limit to only one host at the time so that they do not create the same network concurrently
+  when: 
+    - docker_swarm_manager|bool
+
+- name: Unlock file for docker_network creation
+  file: path={{ portainer_network_lockfile }} state=absent
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  changed_when: false

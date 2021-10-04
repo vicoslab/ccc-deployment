@@ -1,0 +1,19 @@
+- set_fact:
+    AGENT_SECRET: "{{ portainer_secure.agent_token | default(omit) }}"
+
+- name: Create agent-network on overlay if swarm enabled
+  import_tasks: ./subtasks/create-overlay-network.yml
+  when: 
+    - portainer_agent|bool|default(False) or portainer_ui|bool|default(False)
+    - docker_swarm_enabled|bool
+
+- name: Create container for portainer agent
+  vars: 
+    AGENT_EXPOSE_URL: "{{ portainer_agent_publish_ip }}:{{ portainer_agent_publish_port | default(9001) }}:9001/tcp"
+  import_tasks: subtasks/deploy-agent.yml
+  
+- name: Create container for portainer UI
+  vars:
+    UI_EXPOSE_URL: "{{ portainer_agent_publish_ip }}:{{ portainer_ui_publish_port | default(9000) }}:9000/tcp"
+  import_tasks: subtasks/deploy-portainer.yml
+  when: portainer_ui|bool|default(False)

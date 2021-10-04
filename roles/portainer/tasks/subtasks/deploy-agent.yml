@@ -1,0 +1,43 @@
+- name: Container for portainer agent
+  docker_container:
+    name: "{{ portainer_agent_name }}"
+    image: "{{ portainer_agent_image | default('portainer/agent:latest') }}"
+    
+    state: "{{'present' if portainer_agent|bool else 'absent'}}"
+    
+    env:
+      AGENT_SECRET: "{{ AGENT_SECRET | default(omit) }}"
+      AGENT_CLUSTER_ADDR: "{{ 'localhost' if docker_swarm_enabled|bool else omit }}"
+    
+    ports: "{{ [AGENT_EXPOSE_URL] if not docker_swarm_enabled|bool else omit }}"
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    
+    restart_policy: unless-stopped    
+    
+    pull: yes
+  register: portainer_status
+
+# manually connect container to overlay due to bug in ansible that prevents it from properly connecting using ansible docker_container
+- name: Connect portainer-agent to the overlay network agent-network
+  ansible.builtin.command: docker network connect --alias="{{ inventory_hostname }}_agent" {{ portainer_network_overlay }} {{ portainer_agent_name }}
+  when: 
+    - portainer_agent|bool
+    - docker_swarm_enabled|bool
+    - portainer_network_overlay not in portainer_status.container.NetworkSettings.Networks
+    
+# Run docker_container to purge any previous networks
+- name: Container for portainer with overlay (swarm) network
+  community.docker.docker_container:
+    name: "{{ portainer_agent_name }}"
+    state: "started"
+    
+    networks: 
+      - name: "{{ portainer_network_overlay }}"
+        aliases: "{{ inventory_hostname }}_agent"
+    purge_networks: yes
+  when: 
+    - portainer_agent|bool
+    - docker_swarm_enabled|bool
