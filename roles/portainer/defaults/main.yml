@@ -1,5 +1,19 @@
-docker_portainer_agent: False
-docker_portainer_publish_ip: 127.0.0.1
+portainer_ui: False
+portainer_ui_name: portainer-web-ui
+portainer_ui_image: portainer/portainer-ce:latest
+portainer_ui_storage_path: "/path/to/portainer/data"
+portainer_ui_publish_ip: 127.0.0.1
+portainer_ui_publish_port: 9000
+portainer_ui_network: bridge
 
-docker_secure:
- potrainer_agent_token: "LONG_RANDOM_GENERATED_TOKEN_ddDbh431g138"
+portainer_agent: False
+portainer_agent_name: portainer-agent
+portainer_agent_image: portainer/agent:latest
+portainer_agent_publish_ip: 127.0.0.1
+portainer_agent_publish_port: 9001
+
+portainer_network_overlay: portainer-agent-network
+portainer_network_lockfile: "/path/to/portainer/overlay-network.lock"
+
+potrainer_secure:
+ agent_token: "LONG_RANDOM_GENERATED_TOKEN_ddDbh431g138"
