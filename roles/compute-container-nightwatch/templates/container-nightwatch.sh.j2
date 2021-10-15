@@ -30,6 +30,9 @@
 
 CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
+export GIT_SSL_NO_VERIFY=true # workaround for issues with SSL certificate
+
+USAGE_CHECK_TIMEOUT=12*60*60 # 12 hours
 
 NUM_PARALLEL_ANSIBLES="{{ ansible_pull_num_parallel | default(1) }}"
 
@@ -41,7 +44,8 @@ checkout_folder="$ansible_pull_cache/{{ inventory_hostname }}-global-change"
 checkout_url="{{ ansible_pull_url }}"
 checkout_branch="{{ ansible_pull_branch }}"
 inventory_dir="$checkout_folder/{{ ansible_pull_inventory_dir }}"
-playbook="{{ ansible_pull_playbook }}"
+playbook_deploy="{{ ansible_pull_playbook_deploy }}"
+playbook_usage="{{ ansible_pull_playbook_usage }}"
 
 LOG_MAX_DAYS="{{ log_max_days }}"
 log_folder="{{ log_dir }}"
@@ -68,10 +72,16 @@ cd $watched_folder
 declare -A last_runs
 
 last_git_check=$(date +%s)
+last_usage_check=$(date +%s)
 
 echo "Waiting for changes in $watched_folder/$watched_file_pattern .."
 while :
 do
+
+        #############################################################################
+        #############################################################################
+        ### Check for changes in git
+
         updated=0
         
         # do ansible-pull on first run (if checkout folder does not exist)  
@@ -119,7 +129,7 @@ do
                                               -e process_index=$i \
                                               -e process_total=$NUM_PARALLEL_ANSIBLES \
                                               --track-subs \
-                                              $playbook 2>&1 \
+                                              $playbook_deploy 2>&1 \
                                               | tee -a $log_folder/git-triggered-$timestamp-thread-$i.log \
                                               | grep "{{ inventory_hostname }} " &
                                               
@@ -135,6 +145,10 @@ do
             
         fi
         
+        #############################################################################
+        #############################################################################
+        ### Check for changes in user config files
+
         # move to watched folder
         cd $watched_folder
 
@@ -173,7 +187,7 @@ do
                                                       -i $inventory_dir \
                                                       -e machines={{ inventory_hostname }} \
                                                       -e users=$user_id \
-                                                      $playbook 2>&1 \
+                                                      $playbook_deploy 2>&1 \
                                                       | tee -a $log_folder/user-triggered-$user_id-$timestamp.log \
                                                       | grep "{{ inventory_hostname }} "
                         
@@ -195,6 +209,40 @@ do
             echo ""
             echo ""
         fi
-        sleep $CONFIG_CHECK_TIMEOUT
         
+        #############################################################################
+        #############################################################################
+        ### Updated network statistics if needed
+        if [ $(date +%s) -ge $((last_usage_check + $USAGE_CHECK_TIMEOUT)) ] ; then
+			
+			echo ""
+			echo "Updating usage statistics (network usage) ... "
+            # perform ansible pull in parallel and log to provided folder
+            # additionally output final summary to stdout  
+            for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
+            do
+			
+				python3 $(which ansible-pull) -U $checkout_url \
+											  -C $checkout_branch \
+											  -u {{ ansible_user }} \
+											  -i $inventory_dir \
+											  -e machines={{ inventory_hostname }} \
+                                              -e process_index=$i \
+                                              -e process_total=$NUM_PARALLEL_ANSIBLES \
+                                              --track-subs \
+											  $playbook_usage > $log_folder/usage-collection.log 2>&1 &
+                # ensure a few sec of delay between parallel runs to prevent issues with git pull on same checkout folder
+                sleep 2
+            done
+            
+            # wait for all ansible-pull threads to finish
+            wait
+
+			echo "done"
+			echo ""
+		fi
+		
+        sleep $CONFIG_CHECK_TIMEOUT
+
+
 done

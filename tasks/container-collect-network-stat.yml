@@ -1,0 +1,41 @@
+#  1. Get MAC address of its primary network (from docker inspect)
+#  2. Find network name by matching it to /sys/class/net/*/address
+#  3. Collect rx and tx from network in container
+#  4. Save value to file
+
+- name: Get MAC address of its primary network (from docker inspect)
+  community.docker.docker_container_info:
+    name: "{{ container.STACK_NAME }}"
+  register: container_info
+  no_log: True
+  
+- name: Get network name
+  set_fact:
+    CONTAIENR_NETWORK: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access][0].name }}"
+
+- name: Find network name by matching it to /sys/class/net/*/address
+  community.docker.docker_container_exec:
+    container: "{{ container.STACK_NAME }}"
+    command: "/bin/sh -c 'grep -s \"{{ container_info.container.NetworkSettings.Networks[CONTAIENR_NETWORK].MacAddress | default('00:00:00:00:00:00') }}\" -r /sys/class/net/* | cut -f5 -d/'"
+  register: container_net_name
+  when: container_info.exists
+  
+- name: Collect rx and tx from network in container
+  community.docker.docker_container_exec: 
+    container: "{{ container.STACK_NAME }}"
+    command: "/bin/sh -c 'cat /sys/class/net/{{ container_net_name.stdout }}/statistics/*_bytes'"
+  register: container_net_stat
+  when: container_info.exists
+
+- name: Create/ensure dir for statistics 
+  file: path="{{ mount_points.nfs.user_data }}/container-net-statistics" state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+
+- name: Save rx and tx statistics to file
+  lineinfile:
+    path: "{{ mount_points.nfs.user_data }}/container-net-statistics/{{ container.STACK_NAME }}-{{ inventory_hostname }}.log"
+    line: "{{ now() }}:\t{{ container_net_stat.stdout | replace('\n','\t') }}"
+    create: yes
+  when: container_info.exists
