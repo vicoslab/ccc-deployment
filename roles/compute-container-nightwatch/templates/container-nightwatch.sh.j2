@@ -32,7 +32,7 @@ CONFIG_CHECK_TIMEOUT=3
 GIT_CHECK_TIMEOUT=30
 export GIT_SSL_NO_VERIFY=true # workaround for issues with SSL certificate
 
-USAGE_CHECK_TIMEOUT=12*60*60 # 12 hours
+USAGE_CHECK_TIMEOUT=60 #12*60*60 # 12 hours
 
 NUM_PARALLEL_ANSIBLES="{{ ansible_pull_num_parallel | default(1) }}"
 
@@ -214,23 +214,26 @@ do
         #############################################################################
         ### Updated network statistics if needed
         if [ $(date +%s) -ge $((last_usage_check + $USAGE_CHECK_TIMEOUT)) ] ; then
-			
-			echo ""
-			echo "Updating usage statistics (network usage) ... "
+            
+            # mark date for current usage check
+            last_usage_check=$(date +%s)
+            
+            echo ""
+            echo "Updating usage statistics (network usage) ... "
+            
             # perform ansible pull in parallel and log to provided folder
             # additionally output final summary to stdout  
             for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
             do
-			
-				python3 $(which ansible-pull) -U $checkout_url \
-											  -C $checkout_branch \
-											  -u {{ ansible_user }} \
-											  -i $inventory_dir \
-											  -e machines={{ inventory_hostname }} \
+            
+                python3 $(which ansible-pull) -U $checkout_url \
+                                              -C $checkout_branch \
+                                              -u {{ ansible_user }} \
+                                              -i $inventory_dir \
+                                              -e machines={{ inventory_hostname }} \
                                               -e process_index=$i \
                                               -e process_total=$NUM_PARALLEL_ANSIBLES \
-                                              --track-subs \
-											  $playbook_usage > $log_folder/usage-collection.log 2>&1 &
+                                              $playbook_usage > $log_folder/usage-collection-thread-$i.log 2>&1 &
                 # ensure a few sec of delay between parallel runs to prevent issues with git pull on same checkout folder
                 sleep 2
             done
@@ -238,10 +241,10 @@ do
             # wait for all ansible-pull threads to finish
             wait
 
-			echo "done"
-			echo ""
-		fi
-		
+            echo "done"
+            echo ""
+        fi
+        
         sleep $CONFIG_CHECK_TIMEOUT
 
 
