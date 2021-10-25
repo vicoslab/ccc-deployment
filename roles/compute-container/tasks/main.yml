@@ -97,9 +97,13 @@
           - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
           - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"  
     - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
+    - name: ensure private data folders exist with correct premissions
+      file: path="{{mount_points.nfs.private_data}}/{{group_id}}" state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
+      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
+      loop_control: {loop_var: group_id}
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ mount_points.nfs.private_data + "/" + group_id +  ":/storage/private/" + group_id ] }}"
       with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
-      loop_control: {loop_var: group_id}      
+      loop_control: {loop_var: group_id}
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/etc/timezone:/etc/timezone:ro', '/etc/localtime:/etc/localtime:ro'] }}"
       when: "'USE_HOST_TIMEDATE' in container_custom and container_custom.USE_HOST_TIMEDATE|bool"
 
