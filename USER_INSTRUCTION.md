@@ -37,7 +37,7 @@ New packages can only be installed using Conda and/or pip to local home folder. 
 
 ## Container customization
 
-Several container setttings can be controlled from within container by updating `/home/USER/.container/<container-name>.yml` file. The following settings can be specificed in YAML dictionary:
+Several container setttings can be controlled from within container by updating `/home/USER/.containers/<container-name>.yml` file. The following settings can be specificed in YAML dictionary:
  * CONTAINER_IMAGE: docker image to deploy (must be parent of [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile))
  * DEPLOYMENT_NODES: list of nodes/machines where container is deployed (e.g., ['node1', 'node2', 'node3'])
  * USER_PUBKEY: linux SSH public key
