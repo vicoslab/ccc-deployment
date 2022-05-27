@@ -1,3 +1,6 @@
 dependencies:
   - role: nvidia
     when: docker_nvidia_plugin|bool
+    tags: 
+     - dependencies
+     - deps
