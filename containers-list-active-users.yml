@@ -1,0 +1,23 @@
+# Deploy compute-container for each entry in config/user-containers.yml
+- hosts: "{{ machines }}"
+  become: yes
+  become_user: root
+  tasks: 
+
+    - name: Retrieve active FRP connections
+      shell: docker exec {{ iter.container_name }} netstat -t | grep "ESTABLISHED" | grep -oP ':[0-9]*\s*\K.*(?=\.{{ iter.network_name }})' | xargs sudo docker inspect --format '{{ '{{' }} index .Config.Labels "ccc-user.email" {{ '}}' }} ' | grep "\S" | sort | uniq 
+      with_items: "{{ frpc_networks }}"
+      loop_control: 
+        loop_var: iter
+      register: active_conn
+     
+#    - debug: 
+#        msg: "{{active_conn.results}}"
+    - set_fact: active_users=[]
+    - set_fact: 
+        active_users: "{{ active_users }} + {{ iter.stdout.split() }}"
+      with_items: "{{ active_conn.results }}"
+      loop_control: 
+        loop_var: iter 
+      
+    - debug: msg={{active_users}}
