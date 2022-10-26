@@ -154,7 +154,8 @@ do
 
         # then do updates on per-container basis by 
         # perform check for every file in $watched_folder individually
-        for watched_file in $(find . -maxdepth $watched_folders_max_depth  -wholename "$watched_file_pattern") ;
+        #for watched_file in $(find . -maxdepth $watched_folders_max_depth  -wholename "$watched_file_pattern") ;
+        for watched_file in $(ls $watched_file_pattern);
         do
                 # split name into "<root-folder>/<user-id-folder>/<container-id-folder>
                 IFS=/ read var1 user_id container_id <<< "$watched_file"
