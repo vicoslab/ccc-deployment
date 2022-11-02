@@ -30,7 +30,7 @@
       loop_control: 
         loop_var: container_iter
         index_var: iter
-      when: "{{ iter|int % process_total|int == process_index|int }}"
+      when: "iter|int % process_total|int == process_index|int"
       
     - ansible.builtin.fail:
         msg:  "Unable to complete deplyment for '{{ item.name }}' on '{{ item.hostname }}' due to error in '{{ item.task_name }}' ({{ item.task_action }}): {{ item.error }}"

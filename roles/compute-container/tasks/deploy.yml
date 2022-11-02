@@ -8,14 +8,14 @@
 
 # Create folder for USER storage data on NFS storage
 - name: Create/ensure dir for user files on NFS storage
-  file: "{{file_items}}"
+  file: path="{{file_items}}" state=directory
   become: True
   become_user: "{{ nfs_user_name }}"
   run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
   with_items:
-    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}", state: directory}
-    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings", state: directory}
-  loop_control: { loop_var: file_items, label: "{{ file_items.path }}" }
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings"
+  loop_control: { loop_var: file_items, label: "{{ file_items }}" }
 
 - name: Create default user-settings yaml file (if does not exsit) and load it if exists
   block:
