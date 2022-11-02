@@ -14,6 +14,7 @@
       with_items: "{{ deployment_containers }}"
       loop_control: 
         loop_var: container_iter
+        label: "{{ container_iter.STACK_NAME }} ({{ container_iter.USER_EMAIL }}) "
       when:
          (containers is not defined and users is not defined) or
          (containers is defined and container_iter.STACK_NAME in containers.split(",")) or
