@@ -20,6 +20,9 @@
          (containers is defined and container_iter.STACK_NAME in containers.split(",")) or
          (users is defined and deployment_users[container_iter.USER_EMAIL].USER_EMAIL in users.split(","))
 
+    - ansible.builtin.debug:
+        msg: "DEPLOYING ONLY: {{ selected_deployment_containers|map(attribute='STACK_NAME')|list| join(',') }}" 
+    
     - set_fact: ERROR_LIST={{ [] }}
     
     - name: Deploy selcted containers based on processing index
