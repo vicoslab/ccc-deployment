@@ -252,6 +252,7 @@
     purge_networks: no
     
     pull: no
+    container_default_behavior: no_defaults
   register: contianer_status
 
 
@@ -307,4 +308,5 @@
     
     networks: "{{ CONTAINER_NETWORK_LIST }}"
     purge_networks: yes
+    container_default_behavior: no_defaults
 
