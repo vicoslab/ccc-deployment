@@ -33,6 +33,7 @@
       loop_control: 
         loop_var: container_iter
         index_var: iter
+        label: "{{ container_iter.STACK_NAME }} ({{ container_iter.USER_EMAIL }}) "
       when: "iter|int % process_total|int == process_index|int"
       
     - ansible.builtin.fail:
