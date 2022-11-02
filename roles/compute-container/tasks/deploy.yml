@@ -15,7 +15,7 @@
   with_items:
     - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}", state: directory}
     - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings", state: directory}
-  loop_control: {loop_var: file_items}
+  loop_control: { loop_var: file_items, label: "{{ file_items.path }}" }
 
 - name: Create default user-settings yaml file (if does not exsit) and load it if exists
   block:
@@ -66,8 +66,7 @@
         USER_PUBKEY_LIST: []
     - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + container_custom.USER_PUBKEY.split('\n') }}"
       when: "'USER_PUBKEY' in container_custom and container_custom.USER_PUBKEY|length>0"
-    #- set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://github.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
-    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://blbablaba.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
+    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://github.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
       when: "'USER_PUBKEY_FROM_GITHUB' in container_custom and container_custom.USER_PUBKEY_FROM_GITHUB|length>0"
     - set_fact: USER_PUBKEY_STR="{{ USER_PUBKEY_LIST | join('\n') }}"
 
