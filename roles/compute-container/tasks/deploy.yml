@@ -112,6 +112,7 @@
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/var/run/docker.sock:/var/run/docker.sock'] }}"
     - command: 'sed -nr "s/^docker:x:([0-9]+):.*/\1/p" /etc/group'
       register: DOCKER_GROUP_ID
+      check_mode: no
       changed_when: False
     - set_fact: 
         UPDATED_CONTAINER_VARS:
