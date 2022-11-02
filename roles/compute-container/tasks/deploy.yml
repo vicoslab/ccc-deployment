@@ -1,0 +1,310 @@
+# Create needed local HDD/SSD folders
+- name: Create local HDD/SSD storage folders for the user on worker node
+  file: path={{filepath}} state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
+  with_items:
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}"
+  loop_control: {loop_var: filepath}
+
+# Create folder for USER storage data on NFS storage
+- name: Create/ensure dir for user files on NFS storage
+  file: "{{file_items}}"
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  with_items:
+    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}", state: directory}
+    - { path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings", state: directory}
+  loop_control: {loop_var: file_items}
+
+- name: Create default user-settings yaml file (if does not exsit) and load it if exists
+  block:
+    - stat: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      register: custom_user_settings_file
+    
+    - template:
+        src: user-settings.yml
+        dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      become: True
+      become_user: "{{ nfs_user_name }}"
+      run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+      when: not custom_user_settings_file.stat.exists
+
+    - slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+      register: custom_user_settings_file
+      until: "'content' in custom_user_settings_file"
+      delay: 2
+
+- name: Get user-defined custom config if exists, or report error otherwiser
+  block:
+    - set_fact: custom_user_settings={{ custom_user_settings_file.content | b64decode | from_yaml  }}
+  rescue: # use 
+    - name: setting CONTAINER_REPORT_IMAGE_ERROR
+      set_fact: 
+        CONTAINER_REPORT_IMAGE_ERROR: |2
+          "{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}"
+        
+          CUSTOM CONTAINER SETTING ERROR: cannot parse {{ container.STACK_NAME }}.yml, reverted to DEFAULT settings !!
+      
+      
+- name: Add user-defined custom config and check if container should be deployed
+  block:
+    # container_custom has user-supplied values but we still use container for variables that user should newer define (e.g., STACK_NAME, USER_TYPE, ...)
+    - set_fact: container_custom={{ container | combine(custom_user_settings[container.STACK_NAME] | default({}), recursive=True) }}
+    - set_fact: container_extra={{ {} }}
+    - set_fact: deployment_servers={{ container_custom.DEPLOYMENT_NODES | default(deployment_types[container.USER_TYPE].default_nodes) }}
+    - set_fact: allowed_servers={{ container.ALLOWED_NODES | default([]) | union(deployment_types[container.USER_TYPE].allowed_nodes) }}
+    - set_fact: container_state=absent
+    - set_fact: container_state=started
+      when:
+        - inventory_hostname in deployment_servers
+        - inventory_hostname in allowed_servers
+            
+- name: Gather all public keys of one user
+  block:
+    - set_fact:
+        USER_PUBKEY_LIST: []
+    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + container_custom.USER_PUBKEY.split('\n') }}"
+      when: "'USER_PUBKEY' in container_custom and container_custom.USER_PUBKEY|length>0"
+    #- set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://github.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
+    - set_fact: USER_PUBKEY_LIST="{{USER_PUBKEY_LIST + lookup('url', 'https://blbablaba.com/' + container_custom.USER_PUBKEY_FROM_GITHUB + '.keys', split_lines=False).split('\n') }} "
+      when: "'USER_PUBKEY_FROM_GITHUB' in container_custom and container_custom.USER_PUBKEY_FROM_GITHUB|length>0"
+    - set_fact: USER_PUBKEY_STR="{{ USER_PUBKEY_LIST | join('\n') }}"
+
+- name: Gather all allowed devices for this user
+  block:
+    - set_fact: ALLOWED_DEVICE_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_device_groups  }}"
+    - set_fact: ALLOWED_DEVICE_GROUPS="{{ ALLOWED_DEVICE_GROUPS|list + (container.ADDITIONAL_DEVICE_GROUPS | default([]) ) }}"
+      when: "'ADDITIONAL_DEVICE_GROUPS' in container"
+    - set_fact:
+        ALLOWED_DEVICE_ID: []
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([]) + (compute_devices[group_id]| default([])) }}"
+      with_items: "{{ALLOWED_DEVICE_GROUPS}}"
+      loop_control: {loop_var: group_id}
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
+
+- name: Create list of volumes for mounting based on user access rights
+  block: 
+    - name: setting default CONTAINER_VOLUME_MOUNTS 
+      set_fact: 
+        CONTAINER_VOLUME_MOUNTS:
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}:/home/{{ container_custom.USER_NAME }}"
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings:/home/{{ container_custom.USER_NAME }}/.containers"
+          - "{{ mount_points.nfs.apps_data }}:/opt/apps/:ro"
+          - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}:/storage/user"
+          - "{{ mount_points.nfs.group_data}}:/storage/group{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
+          - "{{ mount_points.nfs.dataset_data }}:/storage/datasets{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
+          - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}:/storage/local/hdd"
+          - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
+          - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"  
+    - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
+    - name: ensure private data folders exist with correct premissions
+      file: path="{{mount_points.nfs.private_data}}/{{group_id}}" state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
+      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
+      loop_control: {loop_var: group_id}
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ mount_points.nfs.private_data + "/" + group_id +  ":/storage/private/" + group_id ] }}"
+      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
+      loop_control: {loop_var: group_id}
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/etc/timezone:/etc/timezone:ro', '/etc/localtime:/etc/localtime:ro'] }}"
+      when: "'USE_HOST_TIMEDATE' in container_custom and container_custom.USE_HOST_TIMEDATE|bool"
+
+- name: Enable docker access via docker.sock if allowed
+  block:
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/var/run/docker.sock:/var/run/docker.sock'] }}"
+    - command: 'sed -nr "s/^docker:x:([0-9]+):.*/\1/p" /etc/group'
+      register: DOCKER_GROUP_ID
+      changed_when: False
+    - set_fact: 
+        UPDATED_CONTAINER_VARS:
+          USER_GROUPS: "docker={{DOCKER_GROUP_ID.stdout | default('999')}}"
+    - set_fact: container_extra="{{ container_extra | combine(UPDATED_CONTAINER_VARS) }}"
+    - set_fact: 
+        UPDATED_CUSTOM_CONTAINER_VARS:
+          INSTALL_REPOSITORY_KEYS: "https://download.docker.com/linux/ubuntu/gpg{{(',' +container_custom.INSTALL_REPOSITORY_KEYS) if container_custom.INSTALL_REPOSITORY_KEYS|default('')|length > 0 else ''}}"
+          INSTALL_REPOSITORY_SOURCES: "https://download.docker.com/linux/ubuntu stable{{(',' +container_custom.INSTALL_REPOSITORY_SOURCES) if container_custom.INSTALL_REPOSITORY_SOURCES|default('')|length > 0 else ''}}"
+          INSTALL_PACKAGES: "docker-ce-cli {{container_custom.INSTALL_PACKAGES|default('')}}"
+    - set_fact: container_custom="{{ container_custom | combine(UPDATED_CUSTOM_CONTAINER_VARS)}}"
+  when: "'ENABLE_DOCKER_ACCESS' in container and container.ENABLE_DOCKER_ACCESS|bool"
+      
+- name: Ensure that used container does exists
+  block: 
+  - set_fact: CONTAINER_IMAGE="{{ container_custom.CONTAINER_IMAGE }}"  
+  - name: Check if requested docker image exists
+    community.docker.docker_image:
+      name: "{{ CONTAINER_IMAGE }}"
+      source: pull
+      force_source: "{{ 'yes' if compute_container_image_pull_always|default(True) else 'no' }}"
+      
+  rescue: # use original container and provide IMAGE error to user
+    - set_fact: CONTAINER_IMAGE="{{ container.CONTAINER_IMAGE }}"
+    - name: setting CONTAINER_REPORT_IMAGE_ERROR
+      set_fact: 
+        CONTAINER_REPORT_IMAGE_ERROR: |2
+          {{ CONTAINER_REPORT_IMAGE_ERROR|default("") }} 
+                    
+          IMAGE ERROR: CANNOT FIND '{{container_custom.CONTAINER_IMAGE}}', reverted to DEFAULT image !!
+          
+- name: Get info on docker host
+  community.docker.docker_host_info:
+  register: docker_info
+
+- set_fact:
+    DEVICE_REQUESTS:
+      - # Limit to specific GPU devices if compute_devices are defined otherwise use all devices
+        # CAUTION: provide options={}, device_ids=[] and count=0 as default to ENABLE proper detection of changes in container
+        driver: 'nvidia'
+        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else []}}"
+        count: "{{ 0 if compute_devices is defined else -1}}"
+        capabilities: 
+          - ['gpu']
+        options: "{{ dict() }}"
+  # make sure to skip device_requests if Docker API does not support it (i.e. Docker server version above 19.03 is OK)
+  when: "docker_info.host_info['ServerVersion'] is version('19.03', '>=') and compute_devices is defined and compute_devices is not none"
+
+- name: Prepare list of requested networks
+  set_fact: 
+    CONTAINER_NETWORK_LIST: "{{ compute_container_networks[deployment_types[container.USER_TYPE].access] }}"
+ 
+# Deploy the stack on each worker node
+- name: Deploy container {{ container.STACK_NAME }}
+  throttle: 1
+  community.docker.docker_container:
+    name: "{{ container.STACK_NAME }}"
+    image: "{{ CONTAINER_IMAGE }}"
+    state: "{{ container_state }}"
+    privileged: "{{ container.RUN_PRIVILEGED|default(False)|bool }}"
+    security_opts: "{{ ['seccomp:unconfined'] if container.RUN_PRIVILEGED|default(False)|bool else [] }}"
+    #recreate: yes
+    hostname: "{{ inventory_hostname }}"
+    # NOTE: need to pass labels as string of python dict so that HTTP_PORT
+    #       is correctly used in the key
+    labels: |
+      {
+      {% for TCP_PORT in container_custom.FRP_PORTS.TCP %}
+       "frp.{{ TCP_PORT }}": "tcp",
+       "frp.{{ TCP_PORT }}.health_check": "false",
+      {% endfor %}
+      "frp.enabled": "true",
+      "frp.notify_email": "{{ container.USER_EMAIL }}",
+      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}      
+      "frp.{{ HTTP_PORT.port }}": "{{ 'https' if HTTP_PORT.https_without_pass|default(false)|bool else 'http'}}",
+        {% if HTTP_PORT.subdomain_hostname_prefix|default(true)|bool %}
+      "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ inventory_hostname }}-{{ HTTP_PORT.subdomain }}",
+        {% else %}
+      "frp.{{ HTTP_PORT.port }}.http.subdomain": "{{ HTTP_PORT.subdomain }}",
+        {% endif %}
+        {% if 'pass' in HTTP_PORT.keys() and not HTTP_PORT.https_without_pass|default(false)|bool %}
+      "frp.{{ HTTP_PORT.port }}.http.username": "{{ HTTP_PORT.user|default(container_custom.USER_NAME) }}",
+      "frp.{{ HTTP_PORT.port }}.http.password": "{{ HTTP_PORT.pass }}",
+        {% endif %}
+      "frp.{{ HTTP_PORT.port }}.health_check": "{{ HTTP_PORT.health_check if 'health_check' in HTTP_PORT.keys() else 'false' }}",
+      {% endfor %}
+      "ccc-user.name": "{{ container.USER_FULLNAME }}",
+      "ccc-user.email": "{{ container.USER_EMAIL }}",
+      "ccc-user.mentor": "{{ container.USER_MENTOR | default(omit) }}"
+      }
+    exposed_ports: |
+      [
+      {% for TCP_PORT in container_custom.FRP_PORTS.TCP %}
+      "{{ TCP_PORT }}",
+      {% endfor %}
+      {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}
+      "{{ HTTP_PORT.port }}",
+      {% endfor %}
+      ]
+    shm_size: "{{ container_custom.SHM_SIZE | default('2gb') }}"
+    env:
+      USER_NAME: "{{ container_custom.USER_NAME }}"
+      USER_ID: '{{ nfs_user_id | string }}'
+      USER_PUBKEY: "{{ USER_PUBKEY_STR }}"
+      USER_GROUPS: "{{ container_extra.USER_GROUPS|default(omit) }}"
+      INSTALL_PACKAGES: "{{ container_custom.INSTALL_PACKAGES | default('') }}"
+      INSTALL_REPOSITORY_KEYS: "{{ container_custom.INSTALL_REPOSITORY_KEYS | default('') }}"
+      INSTALL_REPOSITORY_SOURCES: "{{ container_custom.INSTALL_REPOSITORY_SOURCES | default('') }}"
+      RUNIT_STATUS_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.status"
+      RUNIT_WORKING_ENV_FILE: "/home/{{ container_custom.USER_NAME }}/.containers/{{ container.STACK_NAME }}.env-backup"
+      APPS: "{{ compute_container_apps|join(':') }}"
+      CONTAINER_NAME: "{{ container.STACK_NAME }}"
+      CONTAINER_NODE: "{{ inventory_hostname }}"
+      CONTAINER_IMAGE: "{{ CONTAINER_IMAGE }}"
+      CONTAINER_WELCOME_MSG: |2
+         * Pre-installed APPS: '{{ compute_container_apps| map('regex_replace', '^(?P<path>.+,)', '') | map('basename') | map('splitext') | map('first') | unique| sort | join(' ') }}'
+        
+        Available shared and local storage:
+         * /storage/user         * /storage/local/hdd
+         * /storage/group        * /storage/local/ssd
+         * /storage/datasets
+        
+        Container config: '/home/{{ container_custom.USER_NAME }}/.container/{{container.STACK_NAME}}.yml'
+
+        FOR MORE DOCUMENTATION SEE: https://github.com/vicoslab/ccc-deployment/blob/master/USER_INSTRUCTION.md{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}
+        
+    # set device requests if docker server supports it
+    device_requests: "{{ DEVICE_REQUESTS | default(omit)  }}"
+    runtime: "{{compute_container_runtime | default(omit)}}"
+    
+    restart_policy: unless-stopped
+    
+    volumes: "{{ CONTAINER_VOLUME_MOUNTS }}"
+    keep_volumes: no
+    
+    networks: "{{ CONTAINER_NETWORK_LIST }}"      
+    purge_networks: no
+    
+    pull: no
+  register: contianer_status
+
+
+- set_fact: CONTAINER_NETWORK_LOCKFILE="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/ansible.overlay-{{ container.STACK_NAME }}.lock"
+- name: Ensuring atomic call to create docker_network overlay-{{ container.STACK_NAME }}
+  wait_for: path={{ CONTAINER_NETWORK_LOCKFILE }} state=absent
+  throttle: 1
+  
+- name: Lock file for docker_network creation
+  file: path={{ CONTAINER_NETWORK_LOCKFILE }} state=touch
+  changed_when: false
+  
+# We need to attach overlay network manually using CLI (due to bugs in ansible using overlay networks for standalone contianers)
+- name: Create internal overlay network for this container if swarm is enabled (overlay-{{ container.STACK_NAME }})
+  community.docker.docker_network:
+    name: "overlay-{{ container.STACK_NAME }}"
+    driver: "overlay"
+    internal: yes
+    attachable : yes
+  throttle: 1 # Need limit to only one host at the time so that they do not create the same network concurrently
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+    - docker_swarm_manager|bool
+
+- name: Unlock file for docker_network creation
+  file: path={{ CONTAINER_NETWORK_LOCKFILE }} state=absent
+  changed_when: false
+
+- name: Connect contianer to the overlay network (overlay-{{ container.STACK_NAME }})
+  ansible.builtin.command: docker network connect --alias={{inventory_hostname}} overlay-{{container.STACK_NAME}} {{container.STACK_NAME}}  
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+    - ('overlay-'+container.STACK_NAME) not in contianer_status.container.NetworkSettings.Networks
+
+- name: Add overlay to list of the required networks if swarm is enabled
+  block:
+  - set_fact:
+      CONTAINER_NETWORK_OVERLAY:
+        name: "overlay-{{container.STACK_NAME}}"
+        aliases: "{{inventory_hostname}}"
+  - set_fact:
+      CONTAINER_NETWORK_LIST: "{{ CONTAINER_NETWORK_LIST + [CONTAINER_NETWORK_OVERLAY] }}" 
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+
+- name: Ensuring proper connection of container {{ container.STACK_NAME }} to all networks
+  community.docker.docker_container:
+    name: "{{ container.STACK_NAME }}"
+    state: "{{ container_state }}"
+    
+    networks: "{{ CONTAINER_NETWORK_LIST }}"
+    purge_networks: yes
+

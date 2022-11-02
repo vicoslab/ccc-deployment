@@ -19,6 +19,8 @@
          (containers is defined and container_iter.STACK_NAME in containers.split(",")) or
          (users is defined and deployment_users[container_iter.USER_EMAIL].USER_EMAIL in users.split(","))
 
+    - set_fact: ERROR_LIST={{ [] }}
+    
     - name: Deploy selcted containers based on processing index
       vars: 
         container: "{{ container_iter }}"
@@ -29,3 +31,13 @@
         index_var: iter
       when: "{{ iter|int % process_total|int == process_index|int }}"
       
+    - ansible.builtin.fail:
+        msg:  "Unable to complete deplyment for '{{ item.name }}' on '{{ item.hostname }}' due to error in '{{ item.task_name }}' ({{ item.task_action }}): {{ item.error }}"
+      with_items: "{{ ERROR_LIST }}"
+      ignore_errors: yes
+      loop_control:
+        label: "{{ item.name }}"
+      
+    - ansible.builtin.fail:
+        msg: "FAILED on {{ ERROR_LIST|length }} containers: {{ ERROR_LIST|map(attribute='name')|list| join(',') }}"
+      when: ERROR_LIST|length > 0
