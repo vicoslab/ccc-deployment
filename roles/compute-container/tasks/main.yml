@@ -5,6 +5,3 @@
   rescue:
     - set_fact: 
         ERROR_LIST: "{{ERROR_LIST|list + [ {'name': container.STACK_NAME, 'email': container.USER_EMAIL, 'hostname': ansible_hostname, 'task_name': ansible_failed_task.name, 'task_action': ansible_failed_task.action, 'error': ansible_failed_result.msg} ] }}"
-    
-#    - ansible.builtin.debug:
-#        msg: "Unable to complete deplyment for '{{container.STACK_NAME }}' on '{{ ansible_hostname }}' due to error in '{{ ansible_failed_task.name }}' ({{ ansible_failed_task.action }}): {{ ansible_failed_result.msg }}"
