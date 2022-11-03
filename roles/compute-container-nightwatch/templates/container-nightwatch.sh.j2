@@ -158,7 +158,8 @@ do
         for watched_file in $(ls $watched_file_pattern);
         do
                 # split name into "<root-folder>/<user-id-folder>/<container-id-folder>
-                IFS=/ read var1 user_id container_id <<< "$watched_file"
+                #IFS=/ read var1 user_id container_id <<< "$watched_file" # for use with FIND
+                IFS=/ read user_id var1 container_id <<< "$watched_file" # for use with LS
                 
                 # get last run datetime (or assign current time if not found before)
                 # and store it for every "subfolder" in $watched_folder (i.e. this folder represents user-id)
