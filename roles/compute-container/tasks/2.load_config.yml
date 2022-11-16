@@ -1,0 +1,49 @@
+##################################################################################################################################
+##################################################################################################################################
+# Create default user-settings yaml file (if does not exsit) and load it if exists
+
+- name: Check if user-settings yaml file exists
+  stat:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+  register: custom_user_settings_file
+
+- name: Create default user-settings yaml from current settings
+  template:
+    src: user-settings.yml
+    dest: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  when: not custom_user_settings_file.stat.exists
+
+##################################################################################################################################
+##################################################################################################################################
+
+- name: Read user-settings yaml file
+  slurp: path="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/{{ container.STACK_NAME }}.yml"
+  register: custom_user_settings_file
+  until: "'content' in custom_user_settings_file"
+  delay: 2
+
+- name: Get user-defined custom config if exists, or report error otherwiser
+  block:
+    - set_fact: custom_user_settings={{ custom_user_settings_file.content | b64decode | from_yaml  }}
+  rescue: # use 
+    - name: setting CONTAINER_REPORT_IMAGE_ERROR
+      set_fact: 
+        CONTAINER_REPORT_IMAGE_ERROR: |2
+          "{{ CONTAINER_REPORT_IMAGE_ERROR|default('') }}"
+        
+          CUSTOM CONTAINER SETTING ERROR: cannot parse {{ container.STACK_NAME }}.yml, reverted to DEFAULT settings !!
+      
+##################################################################################################################################
+##################################################################################################################################
+
+- name: Combine user-defined custom  with defaults configs
+  # container_custom has user-supplied values but we still use container for variables that user should newer define (e.g., STACK_NAME, USER_TYPE, ...)
+  set_fact:
+    container_custom: "{{ container | combine(custom_user_settings[container.STACK_NAME] | default({}), recursive=True) }}"
+
+- name: Init container_extra config
+  set_fact: 
+    container_extra: "{{ {} }}"

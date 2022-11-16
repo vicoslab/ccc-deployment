@@ -1,0 +1,60 @@
+##################################################################################################################################
+##################################################################################################################################
+
+- set_fact: 
+   CONTAINER_NETWORK_LOCKFILE: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/ansible.overlay-{{ container.STACK_NAME }}.lock"
+
+- name: Ensuring atomic call to create docker_network overlay-{{ container.STACK_NAME }}
+  wait_for: path={{ CONTAINER_NETWORK_LOCKFILE }} state=absent
+  throttle: 1
+  
+- name: Lock file for docker_network creation
+  file: path={{ CONTAINER_NETWORK_LOCKFILE }} state=touch
+  changed_when: false
+  
+# We need to attach overlay network manually using CLI (due to bugs in ansible using overlay networks for standalone contianers)
+- name: Create internal overlay network for this container if swarm is enabled (overlay-{{ container.STACK_NAME }})
+  community.docker.docker_network:
+    name: "overlay-{{ container.STACK_NAME }}"
+    driver: "overlay"
+    internal: yes
+    attachable : yes
+  throttle: 1 # Need limit to only one host at the time so that they do not create the same network concurrently
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+    - docker_swarm_manager|bool
+
+- name: Unlock file for docker_network creation
+  file: path={{ CONTAINER_NETWORK_LOCKFILE }} state=absent
+  changed_when: false
+
+- name: Connect contianer to the overlay network (overlay-{{ container.STACK_NAME }})
+  ansible.builtin.command: docker network connect --alias={{inventory_hostname}} overlay-{{container.STACK_NAME}} {{container.STACK_NAME}}  
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+    - ('overlay-'+container.STACK_NAME) not in contianer_status.container.NetworkSettings.Networks
+
+- name: Add overlay to list of the required networks if swarm is enabled
+  block:
+  - set_fact:
+      CONTAINER_NETWORK_OVERLAY:
+        name: "overlay-{{container.STACK_NAME}}"
+        aliases: "{{inventory_hostname}}"
+  - set_fact:
+      CONTAINER_NETWORK_LIST: "{{ CONTAINER_NETWORK_LIST + [CONTAINER_NETWORK_OVERLAY] }}" 
+  when: 
+    - container_state == "started"
+    - docker_swarm_enabled|default(False)|bool
+
+- name: Ensuring proper connection of container {{ container.STACK_NAME }} to all networks
+  community.docker.docker_container:
+    name: "{{ container.STACK_NAME }}"
+    state: "{{ container_state }}"
+    
+    networks: "{{ CONTAINER_NETWORK_LIST }}"
+    purge_networks: yes
+    
+    #container_default_behavior: no_defaults
+

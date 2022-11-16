@@ -1,0 +1,25 @@
+# Create needed local HDD/SSD folders
+- name: Create local HDD/SSD storage folders for the user on worker node
+  file: 
+    path: "{{ filepath }}"
+    state: directory
+    owner: "{{ nfs_user_name }}"
+    group: "{{ nfs_user_name }}"
+  with_items:
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}"
+  loop_control: {loop_var: filepath}
+
+# Create folder for USER storage data on NFS storage
+- name: Create/ensure dir for user files on NFS storage
+  file: 
+    path: "{{ file_items }}"
+    state: directory
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  with_items:
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings"
+  loop_control: { loop_var: file_items, label: "{{ file_items }}" }
+
