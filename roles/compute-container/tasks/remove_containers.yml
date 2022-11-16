@@ -1,0 +1,6 @@
+- name: Removing container {{ container.STACK_NAME }}
+  community.docker.docker_container:
+    name: "{{ container.STACK_NAME }}"
+    state: absent
+    keep_volumes: no
+    purge_networks: yes

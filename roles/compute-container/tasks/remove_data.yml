@@ -1,0 +1,47 @@
+##################################################################################################################################
+##################################################################################################################################
+
+- name: List current private data mounts for {{ container.USER_EMAIL }}
+  ansible.builtin.find:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private"
+    file_type: directory
+    recurse: no
+  register: CURRENT_PRIVATE_DATA_MOUNTS
+
+- name: Removing any private data mounts for {{ container.USER_EMAIL }}
+  ansible.posix.mount:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
+    state: absent
+  with_items: "{{ CURRENT_PRIVATE_DATA_MOUNTS.files }}"
+  loop_control:
+    label: "{{ item.path|basename }}"
+
+##################################################################################################################################
+##################################################################################################################################
+
+- name: Remove local HDD/SSD storage folders on worker node for {{ container.STACK_NAME }}
+  file: 
+    path: "{{ filepath }}"
+    state: absent
+    owner: "{{ nfs_user_name }}"
+    group: "{{ nfs_user_name }}"
+  with_items:
+    - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}"
+    - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}"
+  loop_control: {loop_var: filepath}
+
+##################################################################################################################################
+##################################################################################################################################
+
+- name: Remove dir for user files on NFS storage 
+  file: 
+    path: "{{ file_items }}"
+    state: absent
+  become: True
+  become_user: "{{ nfs_user_name }}"
+  run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  with_items:
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
+    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings"
+  loop_control: { loop_var: file_items, label: "{{ file_items }}" }
+

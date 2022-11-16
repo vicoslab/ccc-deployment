@@ -1,6 +1,8 @@
 
 - name: Main block for setting up container with try-catch block for error handling
   block:   
+    #######################################################
+    # Get information on host and existing container
     - name: Get info on docker host
       community.docker.docker_host_info:
       register: DOCKER_INFO
@@ -8,12 +10,26 @@
     - name: Get info on any running container
       docker_container_info: name="{{ container.STACK_NAME }}"
       register: CURRENT_CONTAINER_INFO
-      
-    - include_tasks: 1.create_folders.yml
-    - include_tasks: 2.load_config.yml
-    - include_tasks: 3.setup.yml
-    - include_tasks: 4.deploy_container.yml
-    - include_tasks: 5.connect_swarm_network.yml
+    
+    #######################################################
+    # Main blocks
+    - block:
+        - include_tasks: 1.create_folders.yml
+        - include_tasks: 2.load_config.yml
+        - include_tasks: 3.setup.yml
+        - include_tasks: 4.deploy_container.yml
+        - include_tasks: 5.connect_swarm_network.yml
+      when: 
+        - not container.DISABLED|default(False)
+        - not container.PURGE_USER_DATA|default(False)
+    
+    #######################################################
+    # When requested to disable/remove container
+    - include_tasks: remove_containers.yml
+      when: container.DISABLED|default(False)
+    
+    - include_tasks: remove_data.yml
+      when: container.PURGE_USER_DATA|default(False)
   rescue:
     - set_fact: 
         ERROR_LIST: "{{ERROR_LIST|list + [ {'name': container.STACK_NAME, 'email': container.USER_EMAIL, 'hostname': ansible_hostname, 'task_name': ansible_failed_task.name, 'task_action': ansible_failed_task.action, 'error': ansible_failed_result.msg} ] }}"
