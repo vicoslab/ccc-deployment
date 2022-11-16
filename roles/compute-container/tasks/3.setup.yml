@@ -9,6 +9,7 @@
       when:
         - inventory_hostname in deployment_servers
         - inventory_hostname in allowed_servers
+        - not container.DISABLED|default(False)
             
 
 ##################################################################################################################################
