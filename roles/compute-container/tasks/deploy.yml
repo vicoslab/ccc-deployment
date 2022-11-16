@@ -60,6 +60,11 @@
         - inventory_hostname in deployment_servers
         - inventory_hostname in allowed_servers
             
+- name: Get config of any existing container
+  docker_container_info:
+    name: "{{ container.STACK_NAME }}"
+  register: CURRENT_CONTAINER_INFO
+
 - name: Gather all public keys of one user
   block:
     - set_fact:
@@ -95,17 +100,50 @@
           - "{{ mount_points.nfs.dataset_data }}:/storage/datasets{{ ':ro' if deployment_types[container.USER_TYPE].access == 'restricted' else '' }}"
           - "{{ mount_points.local.hdd_data }}/{{ container.USER_EMAIL }}:/storage/local/hdd"
           - "{{ mount_points.local.ssd_data }}/{{ container.USER_EMAIL }}/:/storage/local/ssd"
-          - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"  
+          - "{{ mount_points.local.sshd_data }}/.sshd/:/home/.sshd"
+          
+    - set_fact: PRIVATE_MOUNT_STR="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/:/storage/private/:rshared"
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ PRIVATE_MOUNT_STR ] }}"
+      when: "{{ container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS|default([])|length > 0 or not CURRENT_CONTAINER_INFO.exists or PRIVATE_MOUNT_STR in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
     - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
+    - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_mount_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS | default([]) }}"
     - name: ensure private data folders exist with correct premissions
       file: path="{{mount_points.nfs.private_data}}/{{group_id}}" state=directory owner={{ nfs_user_name }} group={{ nfs_user_name }}
-      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
+      with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS + ALLOWED_PRIVATE_DATA_MOUNT_GROUPS}}"
       loop_control: {loop_var: group_id}
+
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ mount_points.nfs.private_data + "/" + group_id +  ":/storage/private/" + group_id ] }}"
       with_items: "{{ALLOWED_PRIVATE_DATA_GROUPS}}"
       loop_control: {loop_var: group_id}
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list|unique + [ '/etc/timezone:/etc/timezone:ro', '/etc/localtime:/etc/localtime:ro'] }}"
       when: "'USE_HOST_TIMEDATE' in container_custom and container_custom.USE_HOST_TIMEDATE|bool"
+
+- name: List current private data mounts for {{ container.STACK_NAME }}
+  ansible.builtin.find:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private"
+    file_type: directory
+    recurse: no
+  register: CURRENT_PRIVATE_DATA_MOUNTS
+
+- name: Mounting private data for {{ container.STACK_NAME }}
+  ansible.posix.mount:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ group_id }}"
+    src: "{{ mount_points.nfs.private_data }}/{{ group_id }}"
+    state: mounted
+    opts: bind
+    fstype: none
+  with_items: "{{ALLOWED_PRIVATE_DATA_MOUNT_GROUPS}}"
+  loop_control: {loop_var: group_id}
+
+- name: Removing forbidden private data mounts for {{ container.STACK_NAME }}
+  ansible.posix.mount:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
+    state: absent
+  with_items: "{{ CURRENT_PRIVATE_DATA_MOUNTS.files }}"
+  loop_control:
+    label: "{{ item.path|basename }}"
+  when: "{{ item.path|basename not in ALLOWED_PRIVATE_DATA_MOUNT_GROUPS }}"
+  
 
 - name: Enable docker access via docker.sock if allowed
   block:
