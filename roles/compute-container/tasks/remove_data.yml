@@ -35,13 +35,9 @@
 
 - name: Remove dir for user files on NFS storage 
   file: 
-    path: "{{ file_items }}"
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}"
     state: absent
   become: True
   become_user: "{{ nfs_user_name }}"
   run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
-  with_items:
-    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/{{ container.STORAGE_NAME|default(container.STACK_NAME) }}"
-    - "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings"
-  loop_control: { loop_var: file_items, label: "{{ file_items }}" }
 
