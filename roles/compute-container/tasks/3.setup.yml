@@ -101,6 +101,10 @@
   with_items: "{{ALLOWED_PRIVATE_DATA_MOUNT_GROUPS}}"
   loop_control: {loop_var: group_id}
 
+- name: Add user_data to allowed private grupe if have admin privilege
+  set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ ALLOWED_PRIVATE_DATA_MOUNT_GROUPS|list + [ 'user_data' ] }}"
+  when: "container.ADMIN_USER_ACCESS|default(False)"
+
 - name: Removing forbidden private data mounts for {{ container.STACK_NAME }}
   ansible.posix.mount:
     path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
@@ -110,15 +114,14 @@
     label: "{{ item.path|basename }}"
   when: "{{ item.path|basename not in ALLOWED_PRIVATE_DATA_MOUNT_GROUPS }}"
   
-  
 - name: Grant special access to all users data if admin privilege
   ansible.posix.mount:
-    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/admin/user_data"
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/user_data"
     src: "{{ mount_points.nfs.user_data }}/"
     opts: bind
     fstype: none
     state: "{{ 'mounted' if container.ADMIN_USER_ACCESS|default(False) else 'absent'}}"
-  
+
 ##################################################################################################################################
 ##################################################################################################################################
 - name: Enable docker access via docker.sock if allowed
