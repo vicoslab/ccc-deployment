@@ -113,9 +113,8 @@
   
 - name: Grant special access to all users data if admin privilege
   ansible.posix.mount:
-    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/user_data"
-    src: "{{ mount_points.nfs.user_data }}"
-    state: mounted
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/admin/user_data"
+    src: "{{ mount_points.nfs.user_data }}/"
     opts: bind
     fstype: none
     state: "{{ 'mounted' if container.ADMIN_USER_ACCESS|default(False) else 'absent'}}"
