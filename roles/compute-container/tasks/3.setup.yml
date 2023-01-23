@@ -110,6 +110,16 @@
     label: "{{ item.path|basename }}"
   when: "{{ item.path|basename not in ALLOWED_PRIVATE_DATA_MOUNT_GROUPS }}"
   
+  
+- name: Grant special access to all users data if admin privilege
+  ansible.posix.mount:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/user_data"
+    src: "{{ mount_points.nfs.user_data }}"
+    state: mounted
+    opts: bind
+    fstype: none
+    state: "{{ 'mounted' if container.ADMIN_USER_ACCESS|default(False) else 'absent'}}"
+  
 ##################################################################################################################################
 ##################################################################################################################################
 - name: Enable docker access via docker.sock if allowed
