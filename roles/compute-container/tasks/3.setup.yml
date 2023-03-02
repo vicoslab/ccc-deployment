@@ -59,12 +59,18 @@
   
 # Add mount points for private data (new flexible version where mounts can be updated without restarts)
 - block:
+    # WORKAROUNDs to retain old configuration untill containers are restarted
     - set_fact: PRIVATE_MOUNT_STR="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/:/storage/private/:rshared"
+    
+    # CORRECT version: private mounts should be mounted as rslave to prevent internal docker bind propagation back to host 
+    - set_fact: PRIVATE_MOUNT_STR="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/:/storage/private/:rslave"
+      when: "{{ CURRENT_CONTAINER_INFO.exists and PRIVATE_MOUNT_STR  not in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
+      
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ PRIVATE_MOUNT_STR ] }}"
       when: "{{ container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS|default([])|length > 0 or not CURRENT_CONTAINER_INFO.exists or PRIVATE_MOUNT_STR in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
     
     - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_mount_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS | default([]) }}"
-    
+      
 # Add mount points for private data (legacy version)
 - block:
     - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
@@ -109,12 +115,12 @@
   ansible.posix.mount:
     path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
     state: absent
-  with_items: "{{ CURRENT_PRIVATE_DATA_MOUNTS.files }}"
+  with_items: "{{  CURRENT_PRIVATE_DATA_MOUNTS.files }}"
   loop_control:
     label: "{{ item.path|basename }}"
   when: "{{ item.path|basename not in ALLOWED_PRIVATE_DATA_MOUNT_GROUPS }}"
-  
-- name: Grant special access to all users data if admin privilege
+
+- name: Grant special access to all user data if admin privilege
   ansible.posix.mount:
     path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/user_data"
     src: "{{ mount_points.nfs.user_data }}/"
