@@ -64,7 +64,7 @@
     
     # CORRECT version: private mounts should be mounted as rslave to prevent internal docker bind propagation back to host 
     - set_fact: PRIVATE_MOUNT_STR="{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/:/storage/private/:rslave"
-      when: "{{ CURRENT_CONTAINER_INFO.exists and PRIVATE_MOUNT_STR  not in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
+      when: "{{ not CURRENT_CONTAINER_INFO.exists or PRIVATE_MOUNT_STR not in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
       
     - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + [ PRIVATE_MOUNT_STR ] }}"
       when: "{{ container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS|default([])|length > 0 or not CURRENT_CONTAINER_INFO.exists or PRIVATE_MOUNT_STR in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
