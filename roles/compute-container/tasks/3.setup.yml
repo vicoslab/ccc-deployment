@@ -70,7 +70,11 @@
       when: "{{ container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS|default([])|length > 0 or not CURRENT_CONTAINER_INFO.exists or PRIVATE_MOUNT_STR in CURRENT_CONTAINER_INFO.container.HostConfig.Binds }}"
     
     - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_mount_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS | default([]) }}"
-      
+    
+    # CLEAR MOUNTS if container not running
+    - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ list([]) }}"
+      when: "{{ container_state == 'absent' }}"
+    
 # Add mount points for private data (legacy version)
 - block:
     - set_fact: ALLOWED_PRIVATE_DATA_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_GROUPS | default([]) }}"
@@ -105,12 +109,9 @@
     opts: bind
     fstype: none
   with_items: "{{ALLOWED_PRIVATE_DATA_MOUNT_GROUPS}}"
-  loop_control: {loop_var: group_id}
-
-- name: Add user_data to allowed private grupe if have admin privilege
-  set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ ALLOWED_PRIVATE_DATA_MOUNT_GROUPS|list + [ 'user_data' ] }}"
-  when: "container.ADMIN_USER_ACCESS|default(False)"
-
+  loop_control: {loop_var: group_id}  
+  
+ 
 - name: Removing forbidden private data mounts for {{ container.STACK_NAME }}
   ansible.posix.mount:
     path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
@@ -119,14 +120,19 @@
   loop_control:
     label: "{{ item.path|basename }}"
   when: "{{ item.path|basename not in ALLOWED_PRIVATE_DATA_MOUNT_GROUPS }}"
+  ignore_errors: True
 
-- name: Grant special access to all user data if admin privilege
-  ansible.posix.mount:
-    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/user_data"
-    src: "{{ mount_points.nfs.user_data }}/"
-    opts: bind
-    fstype: none
-    state: "{{ 'mounted' if container.ADMIN_USER_ACCESS|default(False) else 'absent'}}"
+##################################################################################################################################
+##################################################################################################################################
+- name: Grant special access to all user data if admin privilege allowed
+  block:
+    - set_fact:
+        ADMIN_MOUNTS:
+          - "{{ mount_points.nfs.user_data }}:/storage/admin/users"
+          - "{{ mount_points.nfs.private_data }}:/storage/admin/privates"
+          - "/var/log/container-nightwatch/:/storage/admin/logs-{{ inventory_hostname }}"
+    - set_fact: CONTAINER_VOLUME_MOUNTS="{{ CONTAINER_VOLUME_MOUNTS|list + ADMIN_MOUNTS|list }}"
+  when: "{{ container.ADMIN_USER_ACCESS|default(False) }}"
 
 ##################################################################################################################################
 ##################################################################################################################################
