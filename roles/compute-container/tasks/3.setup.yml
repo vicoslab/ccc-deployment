@@ -72,7 +72,7 @@
     - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ deployment_types[container.USER_TYPE].allowed_private_data_mount_groups | default([]) + container.ADDITIONAL_PRIVATE_DATA_MOUNT_GROUPS | default([]) }}"
     
     # CLEAR MOUNTS if container not running
-    - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ list([]) }}"
+    - set_fact: ALLOWED_PRIVATE_DATA_MOUNT_GROUPS="{{ [] }}"
       when: "{{ container_state == 'absent' }}"
     
 # Add mount points for private data (legacy version)
