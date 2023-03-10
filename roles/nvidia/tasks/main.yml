@@ -6,6 +6,19 @@
       repo: ppa:graphics-drivers/ppa
       state: present
   
+  - name: Gather package facts
+    package_facts:
+      manager: auto
+    
+  - name: Removing previous nvidia-driver version before installing new version
+    apt: 
+      update_cache: yes
+      install_recommends: no
+      name: ["nvidia-headless-*", "nvidia-utils-*", "nvidia-compute-utils-*", "nvidia-dkms-*", "nvidia-kernel-common-*", "nvidia-kernel-source-*"] 
+      state: absent
+      purge: yes
+    when: '"nvidia-headless-{{nvidia_driver_version}}" not in ansible_facts.packages or "nvidia-utils-{{nvidia_driver_version}}" not in ansible_facts.packages'
+    
   - name: Update apt and install nvidia-driver
     apt: 
       update_cache: yes
