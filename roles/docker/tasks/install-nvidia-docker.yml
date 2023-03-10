@@ -1,7 +1,7 @@
 - name: Install required system packages
   apt: 
     name: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common']
-    state: latest 
+    state: present
     update_cache: yes 
 
 - name: Add nvidia-docker GPG apt Key
