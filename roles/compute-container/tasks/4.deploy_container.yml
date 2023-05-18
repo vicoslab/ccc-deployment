@@ -66,6 +66,7 @@
       {% endfor %}
       "frp.enabled": "true",
       "frp.notify_email": "{{ container.USER_EMAIL }}",
+      {% if 'HTTP' in container_custom.FRP_PORTS %}
       {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}      
       "frp.{{ HTTP_PORT.port }}": "{{ 'https' if HTTP_PORT.https_without_pass|default(false)|bool else 'http'}}",
         {% if HTTP_PORT.subdomain_hostname_prefix|default(true)|bool %}
@@ -79,6 +80,7 @@
         {% endif %}
       "frp.{{ HTTP_PORT.port }}.health_check": "{{ HTTP_PORT.health_check if 'health_check' in HTTP_PORT.keys() else 'false' }}",
       {% endfor %}
+      {% endif %}
       "ccc-user.name": "{{ container.USER_FULLNAME }}",
       "ccc-user.email": "{{ container.USER_EMAIL }}",
       "ccc-user.mentor": "{{ container.USER_MENTOR | default(omit) }}"
@@ -88,9 +90,11 @@
       {% for TCP_PORT in container_custom.FRP_PORTS.TCP %}
       "{{ TCP_PORT }}",
       {% endfor %}
+      {% if 'HTTP' in container_custom.FRP_PORTS %}
       {% for HTTP_PORT in container_custom.FRP_PORTS.HTTP %}
       "{{ HTTP_PORT.port }}",
       {% endfor %}
+      {% endif %}
       ]
     shm_size: "{{ container_custom.SHM_SIZE | default('2gb') }}"
     env:
