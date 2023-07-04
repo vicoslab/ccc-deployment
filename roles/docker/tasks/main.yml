@@ -1,17 +1,30 @@
 - name: Install docker 
   import_tasks: install-docker.yml
+  tags: docker
 
 - name: Install nvidia plugin if required
   import_tasks: install-nvidia-docker.yml
   when: docker_nvidia_plugin|bool
+  tags: 
+    - docker
+    - nvidia
   
 - name: Login to repositiroies
   import_tasks: login-repository.yml
-
+  tags: 
+    - docker 
+    - docker-repos
+  
 - name: Deploy docker swarm
   import_tasks: deploy-swarm.yml
   when: docker_swarm_enabled|bool
+  tags: 
+    - docker
+    - docker-swarm
 
 - name: Deploy networks
   import_tasks: deploy-networks.yml
+  tags: 
+    - docker
+    - docker-networks
   
