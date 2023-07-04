@@ -8,12 +8,12 @@
       - zfs
       - docker
       - frp-client
-      - portainer
       - cachefilesd
       - nfs-storage
       - superfan-gpu
       - monitoring-agent
       - compute-container-nightwatch
+      - portainer
       - patroller
       - inotify 
       - sshd-hostkey
@@ -27,6 +27,7 @@
       with_items: "{{ vars_file.split(',') }}"
       loop_control: {loop_var: vars_file_item}
       when: vars_file is defined
+      tags: always
       
     - name: including main role
       include_role:
@@ -36,7 +37,8 @@
       with_items: "{{ roles_to_deploy }}"
       loop_control: {loop_var: role_item}
       when: role_item not in ['sshd-hostkey','timezone']
-
+      tags: always
+      
     - name: sshd-hostkey | install default hostkey that will be used by sshd within containers
       block:
         - file: path="{{ mount_points.local.sshd_data }}/keys" state=directory mode=0700 owner=root
@@ -47,9 +49,10 @@
         - copy: content="{{ sshd_secure.ed25519.private }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ed25519_key" mode=0644 owner=root
         - copy: content="{{ sshd_secure.ed25519.public }}" dest="{{ mount_points.local.sshd_data }}/keys/ssh_host_ed25519_key.pub" mode=0644 owner=root
       when: "'sshd-hostkey' in roles_to_deploy"
+      tags: sshd-hostkey
       
     - name: Set timezone to based on configuration
       community.general.timezone:
         name: "{{ timezone_setting }}"
       when: "'timezone' in roles_to_deploy"
-      
+      tags: timezone
