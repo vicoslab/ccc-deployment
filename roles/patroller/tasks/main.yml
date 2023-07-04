@@ -1,5 +1,30 @@
+- name: Get info on docker host
+  community.docker.docker_host_info:
+  register: DOCKER_INFO
+      
+- name: Gather all devices for this server
+  block:
+    - set_fact:
+        ALLOWED_DEVICE_ID: []
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([]) + (compute_devices[group_id]| default([])) }}"
+      with_items: "{{ compute_devices.keys() | list | default([]) }}"
+      loop_control: {loop_var: group_id}
+    - set_fact: ALLOWED_DEVICE_ID="{{ ALLOWED_DEVICE_ID|default([])| unique }}"
+  when: compute_devices is defined and compute_devices is not none
+  
+- set_fact:
+    DEVICE_REQUESTS:
+        driver: 'nvidia'
+        device_ids: "{{ ALLOWED_DEVICE_ID if compute_devices is defined else []}}"
+        count: "{{ 0 if compute_devices is defined else -1}}"
+        capabilities: 
+          - ['gpu']
+        options: "{{ dict() }}"
+  ## make sure to skip device_requests if Docker API does not support it (i.e. Docker server version above 19.03 is OK)
+  #when: "DOCKER_INFO.host_info['ServerVersion'] is version('19.03', '>=') and compute_devices is defined and compute_devices is not none"
+
 - name: Deploy container for local Patroller node
-  docker_container:
+  community.docker.docker_container:
     name: "claims"
     state: "{{ 'started' if patroller_enabled|default(False)|bool else 'absent' }}"
     image: "{{patroller_image_version}}"
@@ -22,7 +47,10 @@
       - name: "{{patroller_proxy_network}}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"      
-
+    
+    device_requests: 
+      - "{{ DEVICE_REQUESTS | default(omit) }}"
+    
     pid_mode: host
     privileged: True
     purge_networks: yes
