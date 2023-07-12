@@ -66,6 +66,34 @@ sudo mkdir -p $log_folder
 sudo chown {{ansible_user}}:{{ansible_user}} $log_folder
 echo "Logging ansible-pull to $log_folder ..."
 
+# do updated on first run
+echo "Performing startup-triggered ansible-pull ..."
+# get timestamp for logging
+timestamp=$(date '+%d.%m.%Y-%H:%M:%S')
+# perform ansible pull in parallel and log to provided folder
+# additionally output final summary to stdout  
+for i in $(seq 0 $((NUM_PARALLEL_ANSIBLES-1)))
+do
+	python3 $(which ansible-pull) -U $checkout_url \
+								  -C $checkout_branch \
+								  -d $checkout_folder \
+								  -u {{ ansible_user }} \
+								  -i $inventory_dir \
+								  -e machines={{ inventory_hostname }} \
+								  -e process_index=$i \
+								  -e process_total=$NUM_PARALLEL_ANSIBLES \
+								  --track-subs \
+								  $playbook_deploy 2>&1 \
+								  | tee -a $log_folder/startup-triggered-$timestamp-thread-$i.log \
+								  | grep "{{ inventory_hostname }} " &
+								  
+	# ensure a few sec of delay between parallel runs to prevent issues with git pull on same checkout folder
+	sleep 5
+done
+# wait for all ansible-pull threads to finish
+wait
+echo "    (done)"
+
 # move to watched folder
 cd $watched_folder
 
