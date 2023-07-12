@@ -13,6 +13,7 @@
   get_url:
     url: https://nvidia.github.io/nvidia-docker/{{ ansible_distribution|lower }}{{ ansible_distribution_version }}/nvidia-docker.list 
     dest: /etc/apt/sources.list.d/nvidia-docker.list
+    force: yes
 
 - name: Update apt and install nvidia-container-toolkit and nvidia-container-runtime
   apt: 
