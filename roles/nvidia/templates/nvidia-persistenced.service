@@ -1,9 +1,12 @@
 [Unit]
 Description=NVIDIA Persistence Daemon
 Wants=syslog.target
+Before=docker.service
 StopWhenUnneeded=true
 
 [Service]
 Type=forking
+Restart=always
+RestartSec=10
 ExecStart=/usr/bin/nvidia-persistenced --user nvidia-persistenced --persistence-mode --verbose
 ExecStopPost=/bin/rm -rf /var/run/nvidia-persistenced
