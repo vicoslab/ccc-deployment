@@ -17,7 +17,7 @@
     volumes:
       - "{{ portainer_ui_storage_path }}:/data"
     ports: "{{ [UI_EXPOSE_URL] if not docker_swarm_enabled else omit }}"
-    restart_policy: unless-stopped
+    restart_policy: always
     networks: 
       - name: "{{ portainer_ui_network }}"
     

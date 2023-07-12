@@ -54,7 +54,7 @@
     pid_mode: host
     privileged: True
     purge_networks: yes
-    restart_policy: unless-stopped
+    restart_policy: always
     pull: yes
     log_driver: json-file
     log_options:
@@ -94,7 +94,7 @@
       - "/etc/patroller/web-ui.json:/etc/patroller/web-ui.json"
 
     purge_networks: yes
-    restart_policy: unless-stopped
+    restart_policy: always
     pull: yes
     log_driver: json-file
     log_options:
