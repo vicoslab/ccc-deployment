@@ -16,6 +16,22 @@
   loop_control:
     label: "{{ item.path|basename }}"
 
+- name: Find all files in remaining private data mounts {{ container.USER_EMAIL }}
+  ansible.builtin.find:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private"
+    file_type: directory
+    recurse: no
+  register: CURRENT_PRIVATE_DATA_MOUNTS_REMAINING
+
+- name: Removing any empty left over dirs from private data mounts for {{ container.USER_EMAIL }}
+  ansible.builtin.file:
+    path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/private/{{ item.path|basename }}"
+    state: absent
+  with_items: "{{ CURRENT_PRIVATE_DATA_MOUNTS_REMAINING.files }}"
+  when: item.isdir and item.size == 2
+  loop_control:
+    label: "{{ item.path|basename }}"
+
 ##################################################################################################################################
 ##################################################################################################################################
 
