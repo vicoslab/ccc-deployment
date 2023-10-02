@@ -56,4 +56,5 @@
   become: True
   become_user: "{{ nfs_user_name }}"
   run_once: true # NOTE: only run once on any of the hosts since this will write to the same shared storage
+  ignore_errors: yes
 
