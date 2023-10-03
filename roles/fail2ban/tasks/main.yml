@@ -1,0 +1,36 @@
+- name: Install apt fail2ban packages
+  apt: name=fail2ban state=latest
+  
+- name: Set fail2ban configuration with .local file
+  template:
+    src: ssh.conf.j2
+    dest: /etc/fail2ban/jail.d/ssh.conf
+    owner: root
+    group: root
+    mode: 0644  
+  register: fail2ban_config
+
+- name: Install geopackage if filtering by country
+  apt: name=geoip-bin state=latest
+  when: fail2ban_sshd_ignorebycountry is defined
+
+- name: Install script to check IP country
+  copy:
+    src: check-geoip.sh
+    dest: /etc/fail2ban/filter.d/ignorecommands/geoip-check.sh
+    owner: root
+    group: root
+    mode: 0744  
+  when: fail2ban_sshd_ignorebycountry is defined
+
+- name: Reload fail2ban configuration
+  systemd:
+    name: fail2ban.service
+    state: reloaded
+  when: fail2ban_config.changed
+
+- name: Start/restart fail2ban.service
+  systemd:     
+    name: fail2ban.service
+    enabled: yes
+    state: "{{ 'restarted' if fail2ban_config.changed else 'started' }}"
