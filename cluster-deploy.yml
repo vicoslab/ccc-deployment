@@ -4,6 +4,7 @@
   become_user: root
   vars:
     default_roles:
+      - fail2ban
       - netplan
       - zfs
       - docker
