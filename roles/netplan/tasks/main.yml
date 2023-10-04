@@ -4,7 +4,7 @@
     netplan_interfaces_vlan: "{{ netplan_iface_vlans | default([]) }}"
   template:
     src: 90-ccc-ansible.yaml.j2
-    dest: /etc/netplan/90-ccc-ansible.yaml
+    dest: /etc/netplan/{{ netplan_name|default("90-ccc-ansible") }}.yaml
   when: netplan_iface is defined and netplan_iface|length > 0
   register: netplan_cfg
 
