@@ -4,8 +4,11 @@
     state: absent
     keep_volumes: no
     purge_networks: yes
-    
+  ignore_errors: yes
+  
 - name: Remove overlay network for {{ container.STACK_NAME }}
   community.docker.docker_network:
     name: "overlay-{{ container.STACK_NAME }}"
     state: absent
+    force: yes
+  ignore_errors: yes
