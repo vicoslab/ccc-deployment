@@ -62,16 +62,31 @@
       max-file: 5
       compress: True
       
-- name: Setup config file for WebUI
+#- name: Setup config file for WebUI
+#  block:
+#    - name: Ensures /etc/patroller dir exists
+#      file: path=/etc/patroller state=directory
+#    
+#    - name: Write variables to json config  file
+#      copy: 
+#        content: "{{ patroller_webui_config | to_nice_json }}" 
+#        dest: /etc/patroller/web-ui.json
+#  when: patroller_webui|default(False)|bool
+
+- name: Setup storage folder for WebUI
   block:
-    - name: Ensures /etc/patroller dir exists
-      file: path=/etc/patroller state=directory
+    - name: Ensures storage folder exists
+      file: path="{{ patroller_webui_storage_path}}" state=directory
+
+    - name: Ensures parquete storage file exists
+      file: path="{{ patroller_webui_storage_path}}/occupancy_data.parquet" state=touch
     
     - name: Write variables to json config  file
       copy: 
         content: "{{ patroller_webui_config | to_nice_json }}" 
-        dest: /etc/patroller/web-ui.json
+        dest: "{{ patroller_webui_storage_path }}/web-ui.json"
   when: patroller_webui|default(False)|bool
+
 
 - name: Deploy container for WebUI Patroller node
   docker_container:
@@ -91,7 +106,8 @@
     networks:
       - name: "{{patroller_proxy_network}}"
     volumes:
-      - "/etc/patroller/web-ui.json:/etc/patroller/web-ui.json"
+      - "{{ patroller_webui_storage_path }}/occupancy_data.parquet:/code/occupancy_data.parquet"
+      - "{{ patroller_webui_storage_path }}/web-ui.json:/etc/patroller/web-ui.json"
 
     purge_networks: yes
     restart_policy: always
