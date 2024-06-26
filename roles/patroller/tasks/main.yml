@@ -30,6 +30,7 @@
     image: "{{patroller_image_version}}"
     env:
       PATROLLER_USER_LABELS: "ccc-user.email"
+      PATROLLER_USER_INFO_LABELS: "ccc-user.name,ccc-user.mentor"
       PATROLLER_LEASE: "{{patroller_lease|string}}"
     labels:
       frp.enabled: "true"
