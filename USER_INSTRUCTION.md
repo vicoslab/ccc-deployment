@@ -5,6 +5,7 @@
 Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile) image that provides:
  * Miniconda (at `/home/USER/conda`) and python 3
  * SSH access
+ * [ccc-tools](https://github.com/vicoslab/ccc-tools) (only since v1.09)
  * Optional installation of apt packages during startup ([see below](#container-customization))
 
 Several existing images can be used with specific pre-installed software. For list of available docker images see [DOCKERS_PORT_FOWARDING](DOCKERS_PORT_FOWARDING.md) and [ViCoS Docker HUB](https://hub.docker.com/r/vicoslab/ccc). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
@@ -34,6 +35,15 @@ The following storage runs on NFS and is accessible from all containers running 
 New packages can only be installed using Conda and/or pip to local home folder. Due to shared home folder this enables software installed on one node to be immediately available on other nodes where containers are running. 
 
 **Privilaged access and `sudo` are disabled.** Additional apt-get packages can be installed through container customization or through custom docker images.
+
+### Distributed running of jobs and GPU allocation with ccc-tools
+
+Since v1.09 all docker images have `ccc` binary tool installed that enables running of jobs on multiple nodes in distributed manner with support for PyTorch distributed convention. CCC tool provides following operations:
+
+ * `ccc run`: distributed running of jobs on a set of selected nodes and GPUs
+ * `ccc gpus`: finding available nodes and GPUs for a job
+
+For more information see [ccc-tools GitHub page](https://github.com/vicoslab/ccc-tools).
 
 ## Container customization
 
