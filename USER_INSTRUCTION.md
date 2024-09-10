@@ -7,7 +7,7 @@ Each container is based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc
  * SSH access
  * Optional installation of apt packages during startup ([see below](#container-customization))
 
-Several existing images can be used with specific pre-installed software. For list of available docker images see [vicoslab docker hub](https://hub.docker.com/r/vicoslab/ccc). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
+Several existing images can be used with specific pre-installed software. For list of available docker images see [DOCKERS_PORT_FOWARDING](DOCKERS_PORT_FOWARDING.md) and [ViCoS Docker HUB](https://hub.docker.com/r/vicoslab/ccc). User can also customize the contianer by creating its own docker image based on `vicoslab/ccc:base` with any pre-installed software ([see instructions below](#custom-docker-image)).
 
 ## Access to contianers
 
@@ -50,19 +50,21 @@ Several container setttings can be controlled from within container by updating 
  
 **NOTE: Changes will take affect in 10-20 seconds after .yml file is updated. During the update process container is restarted and will not be accessible for 30-40 seconds. Do NOT forget to save any changes in files and processes before updating .yml file.**
  
- Example of YAML configuration file for contianer named `my-container-name`:
+Example of YAML configuration file for contianer named `my-container-name`:
  
  ```yaml 
 my-container-name:
-  CONTAINER_IMAGE: "vicoslab/ccc:x2go-v1.01-ubuntu18.04-cuda11.0"
+  CONTAINER_IMAGE: "vicoslab/ccc:base-v1.09-ubuntu22.04-cuda12.6.1"
   DEPLOYMENT_NODES: ['node1','node2']
   INSTALL_PACKAGES: "rsync nano htop build-essential cmake cmake-curses-gui"
   SHM_SIZE: 4GB
  ```
- 
 
-### Custom docker image
+You can also customize port forwarding on HTTP with custom subdomains. See [DOCKERS_PORT_FOWARDING](DOCKERS_PORT_FOWARDING.md) for more details.
+
+### Custom docker image 
 
 For any changes to container that cannot be implemented in above .yml file, you can provide your own custom built docker image by setting CONTAINER_IMAGE in the .yml configuration file. 
 
 Custom docker image MUST be based on [`vicoslab/ccc:base`](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile). Base image provides `runit` scripts for services and startup initialization. For more information see [CCC github page](https://github.com/vicoslab/ccc).
+
