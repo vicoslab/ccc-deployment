@@ -1,5 +1,6 @@
 # Docker images 
 
+Swicth container to different docker image by changing CONTAINER_IMAGE setting in the .yml configuration file inside the container (i.e., `/home/USER/.containers/<container-name>.yml`).
 
 Docker images are available in hub as `vicoslab/ccc:[TYPE]-v1.09-ubuntu[UBUNTU_VERSION]-cuda[CUDA_VERSION]`. The following container image types are avilable:
 * `base` ([Dockerfile](https://github.com/vicoslab/ccc/blob/master/base/Dockerfile))
@@ -13,7 +14,7 @@ Docker images are available in hub as `vicoslab/ccc:[TYPE]-v1.09-ubuntu[UBUNTU_V
 
 # Port Forwarding
 
-You will need to correctly setup HTTP PORT FORWARDING in the .yml file to access the services (for VS Code, Jupyter, Xpra) from browser: 
+You will need to correctly setup HTTP PORT FORWARDING in the .yml file (`/home/USER/.containers/<container-name>.yml`) to access the services (for VS Code, Jupyter, Xpra) from browser: 
 
  ```yaml 
 my-container-name:
