@@ -20,6 +20,12 @@ network:
 {% if 'gateway6' in inet %}
             gateway6: "{{ inet.gateway4 }}"
 {% endif %}
+{% if 'dhcp4_overrides' in inet %}
+            dhcp4-overrides:
+{% for key, value in inet.dhcp4_overrides.items() %}
+                {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}        
 {% if 'nameservers' in inet %}
             nameservers:
                 addresses: [ {% for ns in inet.nameservers %}"{{ ns }}"{{ ", " if not loop.last else " " }}{% endfor %} ]

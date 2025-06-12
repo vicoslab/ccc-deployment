@@ -8,8 +8,26 @@
   when: netplan_iface is defined and netplan_iface|length > 0
   register: netplan_cfg
 
+- name: netplan | ensure manual DNS resolv file is present
+  ansible.builtin.lineinfile:
+    path: /etc/resolv-manual.conf
+    create: yes
+    line: "nameserver {{ netplan_override_dns }}"
+    state: present
+  when:
+    - netplan_override_dns is defined
+    - netplan_override_dns | length > 0
+
+- name: netplan | symlink /etc/resolv.conf → /etc/resolv-manual.conf
+  ansible.builtin.file:
+    src: /etc/resolv-manual.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: yes
+  when: netplan_override_dns is defined and netplan_override_dns | length > 0
   
 - name: netplan | appyling netplan
   command: netplan apply
   ignore_errors: false
   when: netplan_cfg.changed
+
