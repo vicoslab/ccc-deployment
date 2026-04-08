@@ -6,9 +6,48 @@
     purge_networks: yes
   ignore_errors: yes
   
-- name: Remove overlay network for {{ container.STACK_NAME }}
-  community.docker.docker_network:
-    name: "overlay-{{ container.STACK_NAME }}"
-    state: absent
-    force: yes
-  ignore_errors: yes
+- name: Best-effort cleanup for {{ container.STACK_NAME }} deletion bookkeeping
+  block:
+    - name: Remove overlay network for {{ container.STACK_NAME }} with a bounded timeout
+      ansible.builtin.command:
+        argv:
+          - timeout
+          - "15"
+          - docker
+          - network
+          - rm
+          - "overlay-{{ container.STACK_NAME }}"
+      register: overlay_network_removal
+      changed_when: overlay_network_removal.rc == 0
+      failed_when: false
+
+    - name: Remove overlay network lock file for {{ container.STACK_NAME }}
+      ansible.builtin.file:
+        path: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings/ansible.overlay-{{ container.STACK_NAME }}.lock"
+        state: absent
+      run_once: true
+      changed_when: false
+
+    - name: Find stale .DELETING marker files for {{ container.STACK_NAME }}
+      ansible.builtin.find:
+        paths: "{{ mount_points.nfs.user_data }}/{{ container.USER_EMAIL }}/container-settings"
+        file_type: file
+        patterns:
+          - "{{ container.STACK_NAME }}*.DELETING"
+          - "*.{{ container.STACK_NAME }}*.DELETING"
+      register: deleting_marker_files
+      run_once: true
+
+    - name: Remove stale .DELETING marker files for {{ container.STACK_NAME }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ deleting_marker_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      run_once: true
+      failed_when: false
+  rescue:
+    - name: Ignore cleanup errors for {{ container.STACK_NAME }} deletion bookkeeping
+      ansible.builtin.debug:
+        msg: "Ignoring cleanup error while deleting {{ container.STACK_NAME }}: {{ ansible_failed_result.msg | default(ansible_failed_result) }}"
